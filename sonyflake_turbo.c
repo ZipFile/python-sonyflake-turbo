@@ -32,12 +32,12 @@ const struct timespec default_start_time = {
 };
 
 inline sonyflake_time to_sonyflake_time(const struct timespec *ts) {
-	return ts->tv_sec * 100 + ts->tv_nsec / 1e7;
+	return ts->tv_sec * 100 + ts->tv_nsec / 10000000;
 }
 
 inline void from_sonyflake_time(sonyflake_time sf_time, struct timespec *ts) {
 	ts->tv_sec = sf_time / 100;
-	ts->tv_nsec = (sf_time % 100) * 1e7;
+	ts->tv_nsec = (sf_time % 100) * 10000000;
 }
 
 inline void sub_diff(struct timespec *a, const struct timespec *b) {
@@ -46,7 +46,7 @@ inline void sub_diff(struct timespec *a, const struct timespec *b) {
 
 	if (a->tv_nsec < 0) {
 		a->tv_sec--;
-		a->tv_nsec += 1e9;
+		a->tv_nsec += 1000000000;
 	}
 }
 
