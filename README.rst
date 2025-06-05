@@ -70,7 +70,7 @@ Install:
 
     python3 -m venv env
     . env/bin/activate
-    pip install -e .[test]
+    pip install -e .[dev]
 
 Run tests:
 
