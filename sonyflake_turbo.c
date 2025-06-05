@@ -1,7 +1,9 @@
 #include <Python.h>
 #include <pythread.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <time.h>
+#include <unistd.h>
 
 #define SONYFLAKE_EPOCH 1409529600 // 2014-09-01 00:00:00 UTC
 #define SONYFLAKE_SEQUENCE_BITS 8
