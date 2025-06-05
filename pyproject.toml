@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=70.1"]
+
+[project]
+name = "sonyflake-turbo"
+version = "0.1.0"
+authors = [
+    {name = "Anatolii Aniskovych", email = "zipfile.d@protonmail.com"},
+]
+description = "A Sonyflake implementation optimized for extreme usages."
+readme = "README.rst"
+requires-python = ">=3.8"
+keywords = ["sonyflake"]
+license = {text = "BSD-2-Clause"}
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Free Threading :: 2 - Beta",
+    "Intended Audience :: Developers",
+]
+
+[project.urls]
+Source = "https://github.com/ZipFile/python-sonyflake-turbo"
+
+[project.optional-dependencies]
+dev = [
+    "flake8",
+    "flake8-pyproject",
+    "isort",
+    "mypy",
+    "pytest",
+]
+
+[tool.setuptools]
+# XXX: As of v80, setuptools does not support including top-level .pyi and py.typed
+include-package-data = true
+
+# TODO: Migrate to [tool.setuptools.ext-modules], when setuptools start supporting ABI3 builds
+
+[tool.setuptools.packages.find]
+include = ["sonyflake_turbo"]
+namespaces = false
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["sonyflake_turbo"]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+application-import-names = ["sonyflake_turbo"]
+max-line-length = 88
+
+[tool.black]
+line-length = 88
+target-version = ["py38", "py39", "py310", "py311", "py312", "py313"]
+
+[tool.mypy]
+strict = true
+warn_unused_configs = true
+
+[tool.cibuildwheel]
+test-command = "pytest --import-mode=importlib -p no:cacheprovider {project}/tests"
+test-requires = ["pytest"]

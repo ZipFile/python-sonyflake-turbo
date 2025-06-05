@@ -1,0 +1,89 @@
+# Based on https://github.com/pypa/cibuildwheel/blob/main/examples/github-deploy.yml
+name: Build and upload to PyPI
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+    - master
+  release:
+    types:
+    - published
+
+jobs:
+  build-sdist:
+    name: Build source tarball
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+    - run: |
+        python -m pip install --upgrade build
+        python -m build --sdist
+    - uses: actions/upload-artifact@v4
+      with:
+        if-no-files-found: error
+        compression-level: 0
+        name: cibw-sdist
+        path: ./dist/*
+
+  build-wheels:
+    name: Build Wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14]
+    env:
+      CIBW_SKIP: pp*
+      CIBW_ENVIRONMENT: >-
+        CIBW_ENABLE="cpython-freethreading"
+        PIP_CONFIG_SETTINGS="build_ext=-j4"
+        CFLAGS="-g0"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build sdist
+      run: pipx run build --sdist
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.23.3
+    - uses: actions/upload-artifact@v4
+      with:
+        if-no-files-found: error
+        compression-level: 0
+        name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+        path: ./wheelhouse/*.whl
+
+  test-pypi-publish:
+    name: Upload release to TestPyPI
+    needs: [build-sdist, build-wheels]
+    runs-on: ubuntu-latest
+    environment: test-pypi
+    permissions:
+      id-token: write
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: cibw-*
+        path: dist
+        merge-multiple: true
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  pypi-publish:
+    name: Upload release to PyPI
+    needs: [test-pypi-publish]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: cibw-*
+        path: dist
+        merge-multiple: true
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
