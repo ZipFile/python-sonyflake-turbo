@@ -304,17 +304,22 @@ PyInit_sonyflake_turbo(void)
 	}
 
 #if defined(Py_GIL_DISABLED) && !defined(Py_LIMITED_API)
-	if (PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED)) {
-		return NULL;
-	}
+	PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
 #endif
 
 	PyObject *sonyflake_cls = PyType_FromSpec(&sonyflake_type_spec);
 
-	if (!sonyflake_cls)
+	if (!sonyflake_cls) {
+		Py_DECREF(module);
 		return NULL;
+	}
 
-	PyModule_AddObject(module, "SonyFlake", sonyflake_cls);
+	if (PyModule_AddObject(module, "SonyFlake", sonyflake_cls) < 0) {
+		Py_DECREF(sonyflake_cls);
+		Py_DECREF(module);
+		return NULL;
+	}
+
 	PyModule_AddIntMacro(module, SONYFLAKE_EPOCH);
 	PyModule_AddIntMacro(module, SONYFLAKE_SEQUENCE_BITS);
 	PyModule_AddIntMacro(module, SONYFLAKE_SEQUENCE_MAX);
