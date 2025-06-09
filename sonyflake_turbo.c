@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <pythread.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
@@ -294,9 +295,81 @@ static struct PyModuleDef sonyflake_module = {
 	.m_size = -1,
 };
 
+inline uint16_t machine_id_lcg(uint32_t x) {
+	return (32309 * x + 13799) % 65536;
+}
+
+inline uint16_t machine_id_lcg_atomic(atomic_uint *x) {
+	uint32_t old, new;
+	do {
+		old = atomic_load_explicit(x, memory_order_relaxed);
+		new = machine_id_lcg(old);
+	} while (!atomic_compare_exchange_weak_explicit(x, &old, new, memory_order_relaxed, memory_order_relaxed));
+	return new;
+}
+
+struct machine_id_lcg_state {
+	PyObject_HEAD
+	atomic_uint machine_id;
+};
+
+static PyObject *machine_id_lcg_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
+	unsigned int seed = 0;
+
+	if (!PyArg_ParseTuple(args, "I", &seed)) {
+		return NULL;
+	}
+
+	allocfunc tp_alloc = PyType_GetSlot(type, Py_tp_alloc);
+
+	assert(tp_alloc != NULL);
+
+	struct machine_id_lcg_state *self = (void *) tp_alloc(type, 0);
+
+	if (!self) {
+		return NULL;
+	}
+
+	atomic_init(&self->machine_id, machine_id_lcg((uint32_t) seed));
+
+	return (PyObject *) self;
+}
+
+static void machine_id_lcg_dealloc(PyObject *self) {
+	PyTypeObject *tp = Py_TYPE(self);
+	freefunc tp_free = PyType_GetSlot(tp, Py_tp_free);
+
+	assert(tp_free != NULL);
+
+	tp_free(self);
+	Py_DECREF(tp);
+}
+
+static PyObject *machine_id_lcg_next(struct machine_id_lcg_state *self) {
+	return PyLong_FromLong(machine_id_lcg_atomic(&self->machine_id));
+}
+
+static PyType_Slot machine_id_lcg_slots[] = {
+	{Py_tp_alloc, PyType_GenericAlloc},
+	{Py_tp_dealloc, machine_id_lcg_dealloc},
+	{Py_tp_iter, PyObject_SelfIter},
+	{Py_tp_iternext, machine_id_lcg_next},
+	{Py_tp_new, machine_id_lcg_new},
+	{Py_tp_doc, "LCG with params a=32309, c=13799, m=65536"},
+	{0, 0},
+};
+
+static PyType_Spec machine_id_lcg_spec = {
+	.name = "sonyflake_turbo.MachineIDLCG",
+	.basicsize = sizeof(struct machine_id_lcg_state),
+	.flags = Py_TPFLAGS_DEFAULT,
+	.slots = machine_id_lcg_slots,
+};
+
 PyMODINIT_FUNC
 PyInit_sonyflake_turbo(void)
 {
+	PyObject *sonyflake_cls, *machine_id_lcg_cls;
 	PyObject *module = PyModule_Create(&sonyflake_module);
 
 	if (!module) {
@@ -307,17 +380,24 @@ PyInit_sonyflake_turbo(void)
 	PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
 #endif
 
-	PyObject *sonyflake_cls = PyType_FromSpec(&sonyflake_type_spec);
+	sonyflake_cls = PyType_FromSpec(&sonyflake_type_spec);
 
 	if (!sonyflake_cls) {
-		Py_DECREF(module);
-		return NULL;
+		goto err;
 	}
 
 	if (PyModule_AddObject(module, "SonyFlake", sonyflake_cls) < 0) {
-		Py_DECREF(sonyflake_cls);
-		Py_DECREF(module);
-		return NULL;
+		goto err_sf;
+	}
+
+	machine_id_lcg_cls = PyType_FromSpec(&machine_id_lcg_spec);
+
+	if (!machine_id_lcg_cls) {
+		goto err_lcg;
+	}
+
+	if (PyModule_AddObject(module, "MachineIDLCG", machine_id_lcg_cls) < 0) {
+		goto err_lcg;
 	}
 
 	PyModule_AddIntMacro(module, SONYFLAKE_EPOCH);
@@ -329,4 +409,12 @@ PyInit_sonyflake_turbo(void)
 	PyModule_AddIntMacro(module, SONYFLAKE_TIME_OFFSET);
 
 	return module;
+
+err_lcg:
+	Py_DECREF(machine_id_lcg_cls);
+err_sf:
+	Py_DECREF(sonyflake_cls);
+err:
+	Py_DECREF(module);
+	return NULL;
 }

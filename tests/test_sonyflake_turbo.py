@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pytest import mark, raises
 
-from sonyflake_turbo import SonyFlake
+from sonyflake_turbo import MachineIDLCG, SonyFlake
 
 
 def test_no_machine_ids() -> None:
@@ -83,3 +83,12 @@ def test_free_threading() -> None:
         assert len(ids) == 250000
         assert len(set(ids)) == len(ids)
         assert sorted(ids) == ids
+
+
+def test_machine_id_lcg() -> None:
+    lcg = MachineIDLCG(123)
+    ids_seq = list(range(65536))
+    ids_rng = [next(lcg) for _ in range(65536)]
+
+    assert not (set(ids_seq) - set(ids_rng))
+    assert ids_seq != ids_rng
