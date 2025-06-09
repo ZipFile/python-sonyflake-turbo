@@ -271,6 +271,13 @@ static PyObject *sonyflake_next(struct sonyflake_state *self) {
 	return PyLong_FromUnsignedLongLong(sonyflake_id);
 }
 
+PyDoc_STRVAR(sonyflake_doc,
+"SonyFlake(*machine_id, start_time=None)\n--\n\n"
+"SonyFlake ID generator implementation that combines multiple ID generators into one to improve throughput.\n"
+"Upon counter overflow, it switches to the next machine ID and sleeps only when all machine ids are exhausted for time"
+"frame of 10ms. This produces always-increasing id sequence.\n"
+);
+
 static PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_alloc, PyType_GenericAlloc},
 	{Py_tp_dealloc, sonyflake_dealloc},
@@ -278,6 +285,7 @@ static PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_iternext, sonyflake_next},
 	{Py_tp_new, sonyflake_new},
 	{Py_tp_init, sonyflake_init},
+	{Py_tp_doc, sonyflake_doc},
 	{0, 0},
 };
 
@@ -349,13 +357,20 @@ static PyObject *machine_id_lcg_next(struct machine_id_lcg_state *self) {
 	return PyLong_FromLong(machine_id_lcg_atomic(&self->machine_id));
 }
 
+PyDoc_STRVAR(machine_id_lcg_doc,
+"MachineIDLCG(seed, /)\n--\n\n"
+"LCG with params a=32309, c=13799, m=65536.\n"
+"Provides a thread-safe way to generate pseudo-random sequence of machine ids to be used as args to SonyFlake.\n"
+);
+
+
 static PyType_Slot machine_id_lcg_slots[] = {
 	{Py_tp_alloc, PyType_GenericAlloc},
 	{Py_tp_dealloc, machine_id_lcg_dealloc},
 	{Py_tp_iter, PyObject_SelfIter},
 	{Py_tp_iternext, machine_id_lcg_next},
 	{Py_tp_new, machine_id_lcg_new},
-	{Py_tp_doc, "LCG with params a=32309, c=13799, m=65536"},
+	{Py_tp_doc, machine_id_lcg_doc},
 	{0, 0},
 };
 
