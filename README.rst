@@ -34,8 +34,9 @@ Turbo mode:
     from random import sample
     from timeit import timeit
 
-    from sonyflake_turbo import SONYFLAKE_MACHINE_ID_MAX, SonyFlake
+    from sonyflake_turbo import SONYFLAKE_MACHINE_ID_MAX, MachineIDLCG, SonyFlake
 
+    get_machine_id = MachineIDLCG(int(datetime.now(tz=timezone.utc).timestamp()))
     epoch = datetime(2025, 6, 5, tzinfo=timezone.utc)
 
     for count in [32, 16, 8, 4, 2, 1]:

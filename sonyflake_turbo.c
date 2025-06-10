@@ -357,6 +357,10 @@ static PyObject *machine_id_lcg_next(struct machine_id_lcg_state *self) {
 	return PyLong_FromLong(machine_id_lcg_atomic(&self->machine_id));
 }
 
+static PyObject *machine_id_lcg_call(struct machine_id_lcg_state *self, PyObject *args, PyObject *kwargs) {
+	return machine_id_lcg_next(self);
+}
+
 PyDoc_STRVAR(machine_id_lcg_doc,
 "MachineIDLCG(seed, /)\n--\n\n"
 "LCG with params a=32309, c=13799, m=65536.\n"
@@ -370,6 +374,7 @@ static PyType_Slot machine_id_lcg_slots[] = {
 	{Py_tp_iter, PyObject_SelfIter},
 	{Py_tp_iternext, machine_id_lcg_next},
 	{Py_tp_new, machine_id_lcg_new},
+	{Py_tp_call, machine_id_lcg_call},
 	{Py_tp_doc, machine_id_lcg_doc},
 	{0, 0},
 };
