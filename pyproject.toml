@@ -34,14 +34,12 @@ dev = [
 ]
 
 [tool.setuptools]
-# XXX: As of v80, setuptools does not support including top-level .pyi and py.typed
-include-package-data = true
+package-dir = {"" = "src"}
 
 # TODO: Migrate to [tool.setuptools.ext-modules], when setuptools start supporting ABI3 builds
 
 [tool.setuptools.packages.find]
-include = ["sonyflake_turbo"]
-namespaces = false
+where = ["src"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

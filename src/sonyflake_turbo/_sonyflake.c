@@ -446,7 +446,7 @@ static PyType_Spec machine_id_lcg_spec = {
 };
 
 PyMODINIT_FUNC
-PyInit_sonyflake_turbo(void)
+PyInit__sonyflake(void)
 {
 	PyObject *sonyflake_cls, *machine_id_lcg_cls;
 	PyObject *module = PyModule_Create(&sonyflake_module);
