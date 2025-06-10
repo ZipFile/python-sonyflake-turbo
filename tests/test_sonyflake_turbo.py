@@ -62,6 +62,12 @@ def test_sonyflake_iter() -> None:
     assert sorted(ids) == ids
 
 
+def test_sonyflake_repr() -> None:
+    sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
+
+    assert repr(sf) == "SonyFlake(0, 32639, 65535, start_time=1749081600)"
+
+
 @mark.skipif(
     not sysconfig.get_config_var("Py_GIL_DISABLED"),
     reason="Requires Python with GIL disabled",
@@ -92,3 +98,9 @@ def test_machine_id_lcg() -> None:
 
     assert not (set(ids_seq) - set(ids_rng))
     assert ids_seq != ids_rng
+
+
+def test_machine_id_lcg_repr() -> None:
+    lcg = MachineIDLCG(57243)
+
+    assert repr(lcg) == "MachineIDLCG(51966)"

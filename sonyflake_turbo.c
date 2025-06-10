@@ -271,6 +271,56 @@ static PyObject *sonyflake_next(struct sonyflake_state *self) {
 	return PyLong_FromUnsignedLongLong(sonyflake_id);
 }
 
+static PyObject *sonyflake_repr(struct sonyflake_state *self) {
+	PyObject *s, *args_list = PyList_New(self->machine_ids_len + 1);
+
+	if (!args_list) {
+		return NULL;
+	}
+
+	s = PyUnicode_FromFormat("start_time=%ld", (long) self->start_time.tv_sec);
+
+	if (!s) {
+		Py_DECREF(args_list);
+		return NULL;
+	}
+
+	PyList_SetItem(args_list, self->machine_ids_len, s);
+
+	for (Py_ssize_t i = 0; i < self->machine_ids_len; i++) {
+		s = PyUnicode_FromFormat("%u", (unsigned) self->machine_ids[i]);
+
+		if (!s) {
+			Py_DECREF(args_list);
+			return NULL;
+		}
+
+		PyList_SetItem(args_list, i, s);
+	}
+
+	s = PyUnicode_FromString(", ");
+
+	if (!s) {
+		Py_DECREF(args_list);
+		return NULL;
+	}
+
+	PyObject *args_str = PyUnicode_Join(s, args_list);
+
+	Py_DECREF(args_list);
+	Py_DECREF(s);
+
+	if (!args_str) {
+		return NULL;
+	}
+
+	s = PyUnicode_FromFormat("SonyFlake(%U)", args_str);
+
+	Py_DECREF(args_str);
+
+	return s;
+}
+
 PyDoc_STRVAR(sonyflake_doc,
 "SonyFlake(*machine_id, start_time=None)\n--\n\n"
 "SonyFlake ID generator implementation that combines multiple ID generators into one to improve throughput.\n"
@@ -286,6 +336,7 @@ static PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_new, sonyflake_new},
 	{Py_tp_init, sonyflake_init},
 	{Py_tp_doc, sonyflake_doc},
+	{Py_tp_repr, sonyflake_repr},
 	{0, 0},
 };
 
@@ -357,6 +408,13 @@ static PyObject *machine_id_lcg_next(struct machine_id_lcg_state *self) {
 	return PyLong_FromLong(machine_id_lcg_atomic(&self->machine_id));
 }
 
+static PyObject *machine_id_lcg_repr(struct machine_id_lcg_state *self) {
+	return PyUnicode_FromFormat(
+		"MachineIDLCG(%u)",
+		atomic_load_explicit(&self->machine_id, memory_order_relaxed)
+	);
+}
+
 static PyObject *machine_id_lcg_call(struct machine_id_lcg_state *self, PyObject *args, PyObject *kwargs) {
 	return machine_id_lcg_next(self);
 }
@@ -376,6 +434,7 @@ static PyType_Slot machine_id_lcg_slots[] = {
 	{Py_tp_new, machine_id_lcg_new},
 	{Py_tp_call, machine_id_lcg_call},
 	{Py_tp_doc, machine_id_lcg_doc},
+	{Py_tp_repr, machine_id_lcg_repr},
 	{0, 0},
 };
 
