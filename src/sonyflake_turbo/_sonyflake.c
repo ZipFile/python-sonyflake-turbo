@@ -326,6 +326,9 @@ PyDoc_STRVAR(sonyflake_doc,
 "SonyFlake ID generator implementation that combines multiple ID generators into one to improve throughput.\n"
 "Upon counter overflow, it switches to the next machine ID and sleeps only when all machine ids are exhausted for time"
 "frame of 10ms. This produces always-increasing id sequence.\n"
+"\n"
+"Important:\n"
+"    Implementation uses thread locks and blocking sleeps.\n"
 );
 
 static PyType_Slot sonyflake_type_slots[] = {
@@ -423,6 +426,8 @@ PyDoc_STRVAR(machine_id_lcg_doc,
 "MachineIDLCG(seed, /)\n--\n\n"
 "LCG with params a=32309, c=13799, m=65536.\n"
 "Provides a thread-safe way to generate pseudo-random sequence of machine ids to be used as args to SonyFlake.\n"
+"\n"
+"You generally want to use this class as a singleton, i.e. create one instance and reuse it.\n"
 );
 
 

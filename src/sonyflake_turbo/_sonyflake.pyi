@@ -14,11 +14,39 @@ SONYFLAKE_MACHINE_ID_OFFSET: int
 SONYFLAKE_TIME_OFFSET: int
 
 class SonyFlake:
-    def __init__(self, *machine_id: int, start_time: Optional[int] = None): ...
-    def __iter__(self) -> Self: ...
-    def __next__(self) -> int: ...
+    def __init__(self, *machine_id: int, start_time: Optional[int] = None):
+        """Initialize SonyFlake ID generator.
+
+        Args:
+            machine_id: Unique ID(s) of a SonyFlake instance.
+                A number in range [0, 0xFFFF]. Must be provided at least one,
+                at most 65536, and have no duplicates.
+            start_time: Time since which the SonyFlake time is defined as the
+                elapsed time. A UNIX timestamp in UTC time zone, if unset
+                defaults to 1409529600 (2014-09-01 00:00:00 UTC). Must be in
+                the past.
+
+        Raises:
+            ValueError: Invalid values of ``machine_id`` or ``start_time``.
+            TypeError: ``machine_id`` or ``start_time`` are not integers.
+        """
+
+    def __iter__(self) -> Self:
+        """Returns ``self``."""
+
+    def __next__(self) -> int:
+        """Produce a SonyFlake ID."""
 
 class MachineIDLCG:
-    def __init__(self, x: int, /) -> None: ...
-    def __iter__(self) -> Self: ...
-    def __next__(self) -> int: ...
+    def __new__(cls, seed: int, /) -> Self:
+        """Make a LCG.
+
+        Args:
+            seed: Starting seed.
+        """
+
+    def __iter__(self) -> Self:
+        """Returns ``self``."""
+
+    def __next__(self) -> int:
+        """Produce a Machine ID for :class:`SonyFlake`."""
