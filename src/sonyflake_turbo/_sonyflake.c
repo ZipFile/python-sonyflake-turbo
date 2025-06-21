@@ -51,7 +51,7 @@ inline void sub_diff(struct timespec *a, const struct timespec *b) {
 	}
 }
 
-inline useconds_t get_time_to_usleep(const struct timespec *diff) {
+inline uint64_t get_time_to_usleep(const struct timespec *diff) {
 	return diff->tv_sec * 1000000 + diff->tv_nsec / 1000;
 }
 
@@ -70,6 +70,11 @@ bool incr_combined_sequence(struct sonyflake_state *self) {
 	self->combined_sequence = (self->combined_sequence + 1) % (self->machine_ids_len * (1 << SONYFLAKE_SEQUENCE_BITS));
 
 	return self->combined_sequence == 0;
+}
+
+static inline void get_relative_current_time(struct sonyflake_state *self, struct timespec *now) {
+	clock_gettime(CLOCK_REALTIME, now);
+	sub_diff(now, &self->start_time);
 }
 
 void sort_machine_ids(uint16_t *machine_ids, size_t machine_ids_len) {
@@ -234,15 +239,13 @@ static void sonyflake_dealloc(struct sonyflake_state *self) {
 
 static PyObject *sonyflake_next(struct sonyflake_state *self) {
 	struct timespec now, future;
-	useconds_t to_sleep = 0;
+	uint64_t to_sleep = 0;
 	sonyflake_time current;
 	uint64_t sonyflake_id;
 
-	clock_gettime(CLOCK_REALTIME, &now);
-
 	PyThread_acquire_lock(self->lock, 1);
 
-	sub_diff(&now, &self->start_time);
+	get_relative_current_time(self, &now);
 
 	current = to_sonyflake_time(&now);
 
@@ -271,6 +274,67 @@ static PyObject *sonyflake_next(struct sonyflake_state *self) {
 	return PyLong_FromUnsignedLongLong(sonyflake_id);
 }
 
+static PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n) {
+	assert(n > 0);
+
+	PyObject *out = PyList_New(n);
+
+	if (!out) {
+		return NULL;
+	}
+
+	struct timespec now, future;
+	uint64_t to_sleep = 0;
+	sonyflake_time current, diff;
+
+	PyThread_acquire_lock(self->lock, 1);
+
+	get_relative_current_time(self, &now);
+
+	current = to_sonyflake_time(&now);
+
+	if (self->elapsed_time < current) {
+		self->elapsed_time = current;
+		self->combined_sequence = 0;
+	} else if (incr_combined_sequence(self)) {
+		self->elapsed_time++;
+	}
+
+	PyList_SetItem(out, 0, PyLong_FromUnsignedLongLong(compose(self)));
+
+	for (Py_ssize_t i = 1; i < n; i++) {
+		if (incr_combined_sequence(self)) {
+			self->elapsed_time++;
+		}
+
+		PyList_SetItem(out, i, PyLong_FromUnsignedLongLong(compose(self)));
+	}
+
+	diff = self->elapsed_time - current;
+
+	if (diff <= 0) {
+		PyThread_release_lock(self->lock);
+		return out;
+	} else if (diff > 1) {
+		get_relative_current_time(self, &now);
+	}
+
+	from_sonyflake_time(self->elapsed_time, &future);
+	sub_diff(&future, &now);
+
+	to_sleep = get_time_to_usleep(&future);
+
+	PyThread_release_lock(self->lock);
+
+	if (to_sleep > 0) {
+		Py_BEGIN_ALLOW_THREADS;
+		usleep(to_sleep);
+		Py_END_ALLOW_THREADS;
+	}
+
+	return out;
+}
+
 static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 	PyObject *s, *args_list = PyList_New(self->machine_ids_len + 1);
 
@@ -287,7 +351,7 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 
 	PyList_SetItem(args_list, self->machine_ids_len, s);
 
-	for (Py_ssize_t i = 0; i < self->machine_ids_len; i++) {
+	for (size_t i = 0; i < self->machine_ids_len; i++) {
 		s = PyUnicode_FromFormat("%u", (unsigned) self->machine_ids[i]);
 
 		if (!s) {
@@ -295,7 +359,7 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 			return NULL;
 		}
 
-		PyList_SetItem(args_list, i, s);
+		PyList_SetItem(args_list, (Py_ssize_t) i, s);
 	}
 
 	s = PyUnicode_FromString(", ");
@@ -321,6 +385,21 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 	return s;
 }
 
+static PyObject *sonyflake_call(struct sonyflake_state *self, PyObject *args) {
+	Py_ssize_t n;
+
+	if (!PyArg_ParseTuple(args, "n", &n)) {
+		return NULL;
+	}
+
+	if (n <= 0) {
+		PyErr_SetString(PyExc_ValueError, "n must be positive");
+		return NULL;
+	}
+
+	return sonyflake_next_n(self, n);
+}
+
 PyDoc_STRVAR(sonyflake_doc,
 "SonyFlake(*machine_id, start_time=None)\n--\n\n"
 "SonyFlake ID generator implementation that combines multiple ID generators into one to improve throughput.\n"
@@ -338,6 +417,7 @@ static PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_iternext, sonyflake_next},
 	{Py_tp_new, sonyflake_new},
 	{Py_tp_init, sonyflake_init},
+	{Py_tp_call, sonyflake_call},
 	{Py_tp_doc, sonyflake_doc},
 	{Py_tp_repr, sonyflake_repr},
 	{0, 0},

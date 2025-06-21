@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 try:
     from typing import Self
@@ -36,6 +36,24 @@ class SonyFlake:
 
     def __next__(self) -> int:
         """Produce a SonyFlake ID."""
+
+    def __call__(self, n: int, /) -> List[int]:
+        """Generate multiple SonyFlake IDs at once.
+
+        Roughly equivalent to `[next(sf) for _ in range(n)]`, but more
+        efficient. This method saves on syscalls to sleep and getting current
+        time.
+
+        Important:
+            The more ids you request, the more other threads has to wait
+            upon next :meth:`next` or :meth:`n` call.
+
+        Args:
+            n: Number of ids to generate. Must be greater than 0.
+
+        Returns:
+            List of ids.
+        """
 
 class MachineIDLCG:
     def __new__(cls, seed: int, /) -> Self:

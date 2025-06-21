@@ -52,10 +52,21 @@ def test_non_int_start_time() -> None:
         )
 
 
-def test_sonyflake_iter() -> None:
-    n = 250000
+@mark.parametrize(
+    ["use_iter", "n"],
+    [
+        (use_iter, n)
+        for use_iter in [True, False]
+        for n in [1, 100, 250000]
+    ],
+)
+def test_sonyflake(use_iter: bool, n: int) -> None:
     sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
-    ids = [next(sf) for _ in range(n)]
+
+    if use_iter:
+        ids = [next(sf) for _ in range(n)]
+    else:
+        ids = sf(n)
 
     assert len(ids) == n
     assert len(set(ids)) == len(ids)
