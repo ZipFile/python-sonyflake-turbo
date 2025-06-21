@@ -392,7 +392,7 @@ static PyObject *machine_id_lcg_new(PyTypeObject *type, PyObject *args, PyObject
 		return NULL;
 	}
 
-	atomic_init(&self->machine_id, machine_id_lcg((uint32_t) seed));
+	atomic_init(&self->machine_id, seed);
 
 	return (PyObject *) self;
 }

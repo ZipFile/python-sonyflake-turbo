@@ -103,4 +103,4 @@ def test_machine_id_lcg() -> None:
 def test_machine_id_lcg_repr() -> None:
     lcg = MachineIDLCG(57243)
 
-    assert repr(lcg) == "MachineIDLCG(51966)"
+    assert repr(lcg) == "MachineIDLCG(57243)"

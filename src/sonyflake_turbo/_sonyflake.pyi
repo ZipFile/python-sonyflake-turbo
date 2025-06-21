@@ -50,3 +50,6 @@ class MachineIDLCG:
 
     def __next__(self) -> int:
         """Produce a Machine ID for :class:`SonyFlake`."""
+
+    def __call__(self) -> int:
+        """Same as :meth:`__next__`. For usage as a callback."""
