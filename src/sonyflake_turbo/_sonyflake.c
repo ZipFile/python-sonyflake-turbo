@@ -237,9 +237,8 @@ static void sonyflake_dealloc(struct sonyflake_state *self) {
 	Py_DECREF(tp);
 }
 
-static PyObject *sonyflake_next(struct sonyflake_state *self) {
+static PyObject *sonyflake_next(struct sonyflake_state *self, uint64_t *to_usleep) {
 	struct timespec now, future;
-	uint64_t to_sleep = 0;
 	sonyflake_time current;
 	uint64_t sonyflake_id;
 
@@ -249,32 +248,32 @@ static PyObject *sonyflake_next(struct sonyflake_state *self) {
 
 	current = to_sonyflake_time(&now);
 
+	if (to_usleep) {
+		*to_usleep = 0;
+	}
+
 	if (self->elapsed_time < current) {
 		self->elapsed_time = current;
 		self->combined_sequence = 0;
 	} else if (incr_combined_sequence(self)) {
 		self->elapsed_time++;
 
-		from_sonyflake_time(self->elapsed_time, &future);
-		sub_diff(&future, &now);
+		if (to_usleep) {
+			from_sonyflake_time(self->elapsed_time, &future);
+			sub_diff(&future, &now);
 
-		to_sleep = get_time_to_usleep(&future);
+			*to_usleep = get_time_to_usleep(&future);
+		}
 	}
 
 	sonyflake_id = compose(self);
 
 	PyThread_release_lock(self->lock);
 
-	if (to_sleep > 0) {
-		Py_BEGIN_ALLOW_THREADS;
-		usleep(to_sleep);
-		Py_END_ALLOW_THREADS;
-	}
-
 	return PyLong_FromUnsignedLongLong(sonyflake_id);
 }
 
-static PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n) {
+static PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, uint64_t *to_usleep) {
 	assert(n > 0);
 
 	PyObject *out = PyList_New(n);
@@ -284,7 +283,6 @@ static PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n) {
 	}
 
 	struct timespec now, future;
-	uint64_t to_sleep = 0;
 	sonyflake_time current, diff;
 
 	PyThread_acquire_lock(self->lock, 1);
@@ -310,11 +308,15 @@ static PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n) {
 		PyList_SetItem(out, i, PyLong_FromUnsignedLongLong(compose(self)));
 	}
 
+	if (!to_usleep) {
+		goto end;
+	}
+
+	*to_usleep = 0;
 	diff = self->elapsed_time - current;
 
 	if (diff <= 0) {
-		PyThread_release_lock(self->lock);
-		return out;
+		goto end;
 	} else if (diff > 1) {
 		get_relative_current_time(self, &now);
 	}
@@ -322,15 +324,10 @@ static PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n) {
 	from_sonyflake_time(self->elapsed_time, &future);
 	sub_diff(&future, &now);
 
-	to_sleep = get_time_to_usleep(&future);
+	*to_usleep = get_time_to_usleep(&future);
 
+end:
 	PyThread_release_lock(self->lock);
-
-	if (to_sleep > 0) {
-		Py_BEGIN_ALLOW_THREADS;
-		usleep(to_sleep);
-		Py_END_ALLOW_THREADS;
-	}
 
 	return out;
 }
@@ -385,8 +382,21 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 	return s;
 }
 
+static PyObject *sonyflake_iternext(struct sonyflake_state *self) {
+	uint64_t to_usleep = 0;
+	PyObject *sonyflake_id = sonyflake_next(self, &to_usleep);
+
+	if (sonyflake_id && to_usleep) {
+		Py_BEGIN_ALLOW_THREADS;
+		usleep(to_usleep);
+		Py_END_ALLOW_THREADS;
+	}
+
+	return sonyflake_id;
+}
+
 static PyObject *sonyflake_call(struct sonyflake_state *self, PyObject *args) {
-	Py_ssize_t n;
+	Py_ssize_t n = 0;
 
 	if (!PyArg_ParseTuple(args, "n", &n)) {
 		return NULL;
@@ -397,7 +407,16 @@ static PyObject *sonyflake_call(struct sonyflake_state *self, PyObject *args) {
 		return NULL;
 	}
 
-	return sonyflake_next_n(self, n);
+	uint64_t to_usleep = 0;
+	PyObject *sonyflake_ids = sonyflake_next_n(self, n, &to_usleep);
+
+	if (sonyflake_ids && to_usleep) {
+		Py_BEGIN_ALLOW_THREADS;
+		usleep(to_usleep);
+		Py_END_ALLOW_THREADS;
+	}
+
+	return sonyflake_ids;
 }
 
 PyDoc_STRVAR(sonyflake_doc,
@@ -414,7 +433,7 @@ static PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_alloc, PyType_GenericAlloc},
 	{Py_tp_dealloc, sonyflake_dealloc},
 	{Py_tp_iter, PyObject_SelfIter},
-	{Py_tp_iternext, sonyflake_next},
+	{Py_tp_iternext, sonyflake_iternext},
 	{Py_tp_new, sonyflake_new},
 	{Py_tp_init, sonyflake_init},
 	{Py_tp_call, sonyflake_call},
