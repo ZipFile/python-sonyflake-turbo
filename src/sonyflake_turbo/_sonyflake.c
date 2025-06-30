@@ -449,11 +449,25 @@ static PyType_Spec sonyflake_type_spec = {
 	.slots = sonyflake_type_slots,
 };
 
+static int sonyflake_exec(PyObject *module);
+
+static PyModuleDef_Slot sonyflake_slots[] = {
+	{Py_mod_exec, sonyflake_exec},
+#if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x030c0000
+	{Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
+#endif
+#if !defined(Py_LIMITED_API) && defined(Py_GIL_DISABLED)
+	{Py_mod_gil, Py_MOD_GIL_NOT_USED},
+#endif
+	{0, NULL}
+};
+
 static struct PyModuleDef sonyflake_module = {
 	PyModuleDef_HEAD_INIT,
 	.m_name = "sonyflake_turbo",
 	.m_doc = "",
-	.m_size = -1,
+	.m_size = 0,
+	.m_slots = sonyflake_slots,
 };
 
 inline uint16_t machine_id_lcg(uint32_t x) {
@@ -552,16 +566,11 @@ static PyType_Spec machine_id_lcg_spec = {
 PyMODINIT_FUNC
 PyInit__sonyflake(void)
 {
+	return PyModuleDef_Init(&sonyflake_module);
+}
+
+static int sonyflake_exec(PyObject *module) {
 	PyObject *sonyflake_cls, *machine_id_lcg_cls;
-	PyObject *module = PyModule_Create(&sonyflake_module);
-
-	if (!module) {
-		return NULL;
-	}
-
-#if defined(Py_GIL_DISABLED) && !defined(Py_LIMITED_API)
-	PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
-#endif
 
 	sonyflake_cls = PyType_FromSpec(&sonyflake_type_spec);
 
@@ -591,13 +600,12 @@ PyInit__sonyflake(void)
 	PyModule_AddIntMacro(module, SONYFLAKE_MACHINE_ID_OFFSET);
 	PyModule_AddIntMacro(module, SONYFLAKE_TIME_OFFSET);
 
-	return module;
+	return 0;
 
 err_lcg:
 	Py_DECREF(machine_id_lcg_cls);
 err_sf:
 	Py_DECREF(sonyflake_cls);
 err:
-	Py_DECREF(module);
-	return NULL;
+	return -1;
 }
