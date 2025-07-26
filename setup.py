@@ -17,7 +17,11 @@ setup(
     ext_modules=[
         Extension(
             "sonyflake_turbo._sonyflake",
-            sources=["src/sonyflake_turbo/_sonyflake.c"],
+            sources=[
+                "src/sonyflake_turbo/_sonyflake.c",
+                "src/sonyflake_turbo/sonyflake.c",
+                "src/sonyflake_turbo/machine_ids.c"
+            ],
             define_macros=define_macros,
             py_limited_api=py_limited_api,
         ),
