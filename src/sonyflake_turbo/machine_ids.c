@@ -4,6 +4,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "machine_ids.h"
 
@@ -38,7 +39,7 @@ bool has_machine_id_dupes(const uint16_t *machine_ids, size_t machine_ids_len) {
 	return false;
 }
 
-static PyObject *machine_id_lcg_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
+static PyObject *machine_id_lcg_new(PyTypeObject *type, PyObject *args, PyObject *Py_UNUSED(kwargs)) {
 	unsigned int seed = 0;
 
 	if (!PyArg_ParseTuple(args, "I", &seed)) {
@@ -81,7 +82,7 @@ static PyObject *machine_id_lcg_repr(struct machine_id_lcg_state *self) {
 	);
 }
 
-static PyObject *machine_id_lcg_call(struct machine_id_lcg_state *self, PyObject *args, PyObject *kwargs) {
+static PyObject *machine_id_lcg_call(struct machine_id_lcg_state *self, PyObject *Py_UNUSED(args), PyObject *Py_UNUSED(kwargs)) {
 	return machine_id_lcg_next(self);
 }
 
@@ -100,7 +101,7 @@ PyType_Slot machine_id_lcg_slots[] = {
 	{Py_tp_iternext, machine_id_lcg_next},
 	{Py_tp_new, machine_id_lcg_new},
 	{Py_tp_call, machine_id_lcg_call},
-	{Py_tp_doc, machine_id_lcg_doc},
+	{Py_tp_doc, (char *) machine_id_lcg_doc},
 	{Py_tp_repr, machine_id_lcg_repr},
 	{0, 0},
 };

@@ -1,6 +1,7 @@
 import sysconfig
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from typing import Awaitable, Callable
 
 from pytest import mark, raises
 
@@ -54,11 +55,7 @@ def test_non_int_start_time() -> None:
 
 @mark.parametrize(
     ["use_iter", "n"],
-    [
-        (use_iter, n)
-        for use_iter in [True, False]
-        for n in [1, 100, 250000]
-    ],
+    [(use_iter, n) for use_iter in [True, False] for n in [1, 100, 250000]],
 )
 def test_sonyflake(use_iter: bool, n: int) -> None:
     sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
@@ -100,6 +97,42 @@ def test_free_threading() -> None:
         assert len(ids) == 250000
         assert len(set(ids)) == len(ids)
         assert sorted(ids) == ids
+
+
+async def make_n_ids_asyncgen(sf: SonyFlake, n: int) -> list[int]:
+    out = []
+
+    async for id_ in sf:
+        n -= 1
+
+        if n < 0:
+            break
+        else:
+            out.append(id_)
+
+    return out
+
+
+async def _test_async_gen(sleep: Callable[[float], Awaitable[None]]) -> None:
+    sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600, sleep=sleep)
+    ids = await make_n_ids_asyncgen(sf, 250000)
+
+    assert len(ids) == 250000
+    assert len(set(ids)) == len(ids)
+    assert sorted(ids) == ids
+
+
+def test_asyncio_gen() -> None:
+    from asyncio import run, sleep
+
+    run(_test_async_gen(sleep))
+
+
+def test_trio_gen() -> None:
+    from trio import run, sleep
+
+    run(_test_async_gen, sleep)
+
 
 
 def test_machine_id_lcg() -> None:

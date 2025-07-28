@@ -1,15 +1,39 @@
 #include <Python.h>
 #include <pythread.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <time.h>
-#include <unistd.h>
 
 #include "sonyflake.h"
 #include "machine_ids.h"
+#include "async_iter.h"
 
 static int sonyflake_exec(PyObject *module);
+
+struct sonyflake_module_state {
+	PyObject *sonyflake_cls;
+	PyObject *sonyflake_aiter_cls;
+	PyObject *machine_id_lcg_cls;
+};
+
+static int sonyflake_module_traverse(PyObject *m, visitproc visit, void *arg) {
+	struct sonyflake_module_state *state = PyModule_GetState(m);
+	Py_VISIT(state->sonyflake_aiter_cls);
+	Py_VISIT(state->sonyflake_cls);
+	Py_VISIT(state->machine_id_lcg_cls);
+	return 0;
+}
+
+static int sonyflake_module_clear(PyObject *m) {
+	struct sonyflake_module_state *state = PyModule_GetState(m);
+	Py_CLEAR(state->sonyflake_aiter_cls);
+	Py_CLEAR(state->sonyflake_cls);
+	Py_CLEAR(state->machine_id_lcg_cls);
+	return 0;
+}
+
+static void sonyflake_module_free(void *m) {
+	sonyflake_module_clear(m);
+}
 
 PyModuleDef_Slot sonyflake_slots[] = {
 	{Py_mod_exec, sonyflake_exec},
@@ -26,8 +50,11 @@ struct PyModuleDef sonyflake_module = {
 	PyModuleDef_HEAD_INIT,
 	.m_name = MODULE_NAME,
 	.m_doc = "",
-	.m_size = 0,
+	.m_size = sizeof(struct sonyflake_module_state),
 	.m_slots = sonyflake_slots,
+	.m_traverse = sonyflake_module_traverse,
+	.m_clear = sonyflake_module_clear,
+	.m_free = sonyflake_module_free,
 };
 
 PyMODINIT_FUNC
@@ -36,27 +63,57 @@ PyInit__sonyflake(void)
 	return PyModuleDef_Init(&sonyflake_module);
 }
 
+PyObject *sonyflake_get_aiter_cls(PyObject *self) {
+	struct sonyflake_module_state *module_state = PyType_GetModuleState(Py_TYPE(self));
+
+	if (!module_state) {
+		return NULL;
+	}
+
+	return module_state->sonyflake_aiter_cls;
+}
+
+PyObject *sonyflake_get_cls(PyObject *self) {
+	struct sonyflake_module_state *module_state = PyType_GetModuleState(Py_TYPE(self));
+
+	if (!module_state) {
+		return NULL;
+	}
+
+	return module_state->sonyflake_cls;
+}
+
 static int sonyflake_exec(PyObject *module) {
-	PyObject *sonyflake_cls, *machine_id_lcg_cls;
+	struct sonyflake_module_state *state = PyModule_GetState(module);
 
-	sonyflake_cls = PyType_FromSpec(&sonyflake_type_spec);
+	state->sonyflake_cls = NULL;
+	state->sonyflake_aiter_cls = NULL;
+	state->machine_id_lcg_cls = NULL;
 
-	if (!sonyflake_cls) {
+	state->sonyflake_cls = PyType_FromModuleAndSpec(module, &sonyflake_type_spec, NULL);
+
+	if (!state->sonyflake_cls) {
 		goto err;
 	}
 
-	if (PyModule_AddObject(module, "SonyFlake", sonyflake_cls) < 0) {
-		goto err_sf;
+	if (PyModule_AddObject(module, "SonyFlake", state->sonyflake_cls) < 0) {
+		goto err;
 	}
 
-	machine_id_lcg_cls = PyType_FromSpec(&machine_id_lcg_spec);
+	state->sonyflake_aiter_cls = PyType_FromModuleAndSpec(module, &sonyflake_aiter_type_spec, NULL);
 
-	if (!machine_id_lcg_cls) {
-		goto err_lcg;
+	if (!state->sonyflake_aiter_cls) {
+		goto err;
 	}
 
-	if (PyModule_AddObject(module, "MachineIDLCG", machine_id_lcg_cls) < 0) {
-		goto err_lcg;
+	state->machine_id_lcg_cls = PyType_FromModuleAndSpec(module, &machine_id_lcg_spec, NULL);
+
+	if (!state->machine_id_lcg_cls) {
+		goto err;
+	}
+
+	if (PyModule_AddObject(module, "MachineIDLCG", state->machine_id_lcg_cls) < 0) {
+		goto err;
 	}
 
 	PyModule_AddIntMacro(module, SONYFLAKE_EPOCH);
@@ -69,10 +126,10 @@ static int sonyflake_exec(PyObject *module) {
 
 	return 0;
 
-err_lcg:
-	Py_DECREF(machine_id_lcg_cls);
-err_sf:
-	Py_DECREF(sonyflake_cls);
 err:
+	Py_CLEAR(state->machine_id_lcg_cls);
+	Py_CLEAR(state->sonyflake_cls);
+	Py_CLEAR(state->sonyflake_aiter_cls);
+
 	return -1;
 }

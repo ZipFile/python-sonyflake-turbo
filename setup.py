@@ -8,8 +8,8 @@ if sysconfig.get_config_var("Py_GIL_DISABLED"):
     define_macros = []
     py_limited_api = False
 else:
-    options = {"bdist_wheel": {"py_limited_api": "cp38"}}
-    define_macros = [("Py_LIMITED_API", "0x030800f0")]
+    options = {"bdist_wheel": {"py_limited_api": "cp310"}}
+    define_macros = [("Py_LIMITED_API", "0x030A00f0")]
     py_limited_api = True
 
 setup(
@@ -20,7 +20,8 @@ setup(
             sources=[
                 "src/sonyflake_turbo/_sonyflake.c",
                 "src/sonyflake_turbo/sonyflake.c",
-                "src/sonyflake_turbo/machine_ids.c"
+                "src/sonyflake_turbo/machine_ids.c",
+                "src/sonyflake_turbo/async_iter.c",
             ],
             define_macros=define_macros,
             py_limited_api=py_limited_api,

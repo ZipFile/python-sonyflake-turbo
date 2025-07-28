@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Callable, Awaitable, AsyncIterator
 
 try:
     from typing import Self
@@ -14,7 +14,12 @@ SONYFLAKE_MACHINE_ID_OFFSET: int
 SONYFLAKE_TIME_OFFSET: int
 
 class SonyFlake:
-    def __init__(self, *machine_id: int, start_time: Optional[int] = None):
+    def __init__(
+        self,
+        *machine_id: int,
+        start_time: Optional[int] = None,
+        sleep: Optional[Callable[[float], Awaitable[None]]] = None,
+    ) -> None:
         """Initialize SonyFlake ID generator.
 
         Args:
@@ -53,6 +58,13 @@ class SonyFlake:
 
         Returns:
             List of ids.
+        """
+
+    def __aiter__(self) -> AsyncIterator[int]:
+        """Return async iterator yielding SonyFlake IDs.
+
+        Raises:
+            RuntimeError: if sleep function was not provided.
         """
 
 class MachineIDLCG:

@@ -8,11 +8,14 @@
 #include <unistd.h>
 
 #include "sonyflake.h"
+#include "async_iter.h"
+#include "machine_ids.h"
 
 struct sonyflake_state {
 	PyObject_HEAD
 	PyThread_type_lock *lock;
 
+	PyObject *async_sleep;
 	struct timespec start_time;
 	sonyflake_time elapsed_time;
 	uint32_t combined_sequence;
@@ -38,7 +41,7 @@ static inline void get_relative_current_time(struct sonyflake_state *self, struc
 	sub_diff(now, &self->start_time);
 }
 
-static PyObject *sonyflake_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
+static PyObject *sonyflake_new(PyTypeObject *type, PyObject *Py_UNUSED(args), PyObject *Py_UNUSED(kwargs)) {
 	allocfunc tp_alloc = PyType_GetSlot(type, Py_tp_alloc);
 
 	assert(tp_alloc != NULL);
@@ -58,6 +61,7 @@ static PyObject *sonyflake_new(PyTypeObject *type, PyObject *args, PyObject *kwa
 		return NULL;
 	}
 
+	self->async_sleep = NULL;
 	self->start_time = default_start_time;
 	self->elapsed_time = 0;
 	self->combined_sequence = 0;
@@ -72,6 +76,7 @@ static int sonyflake_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 	PyObject *machine_id_item = NULL;
 	PyObject *start_time_obj = NULL;
 	Py_ssize_t machine_ids_len = 0;
+	PyObject *async_sleep = NULL;
 	long long start_time = 0;
 	long machine_id = 0;
 	Py_ssize_t i = 0;
@@ -128,23 +133,41 @@ static int sonyflake_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 
 	start_time_obj = PyDict_GetItemString(kwargs, "start_time");
 
-	if (start_time_obj == NULL || start_time_obj == Py_None) {
-		return 0;
-	}
-
-	if (!PyLong_Check(start_time_obj)) {
-		PyErr_SetString(PyExc_TypeError, "start_time must be an integer");
+	if (PyErr_Occurred()) {
 		goto err;
 	}
 
-	start_time = PyLong_AsLongLong(start_time_obj);
+	if (!(start_time_obj == NULL || start_time_obj == Py_None)) {
+		if (!PyLong_Check(start_time_obj)) {
+			PyErr_SetString(PyExc_TypeError, "start_time must be an integer");
+			goto err;
+		}
+
+		start_time = PyLong_AsLongLong(start_time_obj);
+
+		if (PyErr_Occurred()) {
+			goto err;
+		}
+
+		self->start_time.tv_sec = start_time;
+		self->start_time.tv_nsec = 0;
+	}
+
+	async_sleep = PyDict_GetItemString(kwargs, "sleep");
 
 	if (PyErr_Occurred()) {
 		goto err;
 	}
 
-	self->start_time.tv_sec = start_time;
-	self->start_time.tv_nsec = 0;
+	if (!(async_sleep == NULL || async_sleep == Py_None)) {
+		if (!PyCallable_Check(async_sleep)) {
+			PyErr_SetString(PyExc_TypeError, "sleep must be callable");
+			goto err;
+		}
+
+		self->async_sleep = async_sleep;
+		Py_INCREF(async_sleep);
+	}
 
 	return 0;
 
@@ -155,15 +178,26 @@ err:
 		self->machine_ids_len = 0;
 	}
 
+	if (self->async_sleep) {
+		Py_DECREF(self->async_sleep);
+	}
+
 	return -1;
 }
 
+static int sonyflake_clear(struct sonyflake_state *self) {
+	Py_CLEAR(self->async_sleep);
+	return 0;
+}
+
 static void sonyflake_dealloc(struct sonyflake_state *self) {
+	sonyflake_clear(self);
+
 	if (self->lock) {
 		PyThread_free_lock(self->lock);
 	}
 
-	PyTypeObject *tp = Py_TYPE(self);
+	PyTypeObject *tp = Py_TYPE((PyObject *) self);
 	freefunc tp_free = PyType_GetSlot(tp, Py_tp_free);
 
 	assert(tp_free != NULL);
@@ -174,6 +208,12 @@ static void sonyflake_dealloc(struct sonyflake_state *self) {
 
 	tp_free(self);
 	Py_DECREF(tp);
+}
+
+static int sonyflake_traverse(struct sonyflake_state *self, visitproc visit, void *arg) {
+	Py_VISIT(self->async_sleep);
+	Py_VISIT(Py_TYPE((PyObject *) self));
+	return 0;
 }
 
 PyObject *sonyflake_next(struct sonyflake_state *self, uint64_t *to_usleep) {
@@ -271,6 +311,10 @@ end:
 	return out;
 }
 
+PyObject *sonyflake_get_async_sleep(struct sonyflake_state *self) {
+	return self->async_sleep;
+}
+
 static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 	PyObject *s, *args_list = PyList_New(self->machine_ids_len + 1);
 
@@ -334,6 +378,24 @@ static PyObject *sonyflake_iternext(struct sonyflake_state *self) {
 	return sonyflake_id;
 }
 
+PyObject *sonyflake_aiter(struct sonyflake_state *sf) {
+	if (!sf->async_sleep) {
+		PyErr_SetString(
+			PyExc_RuntimeError,
+			"SonyFlake instance is not initialized with async sleep function"
+		);
+		return NULL;
+	}
+
+	PyObject *aiter_cls = sonyflake_get_aiter_cls((PyObject *) sf);
+
+	if (!aiter_cls) {
+		return NULL;
+	}
+
+	return PyObject_CallFunction(aiter_cls, "O", sf);
+}
+
 static PyObject *sonyflake_call(struct sonyflake_state *self, PyObject *args) {
 	Py_ssize_t n = 0;
 
@@ -371,19 +433,22 @@ PyDoc_STRVAR(sonyflake_doc,
 PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_alloc, PyType_GenericAlloc},
 	{Py_tp_dealloc, sonyflake_dealloc},
+	{Py_tp_traverse, sonyflake_traverse},
+	{Py_tp_clear, sonyflake_clear},
 	{Py_tp_iter, PyObject_SelfIter},
 	{Py_tp_iternext, sonyflake_iternext},
 	{Py_tp_new, sonyflake_new},
 	{Py_tp_init, sonyflake_init},
 	{Py_tp_call, sonyflake_call},
-	{Py_tp_doc, sonyflake_doc},
+	{Py_tp_doc, (char *) sonyflake_doc},
 	{Py_tp_repr, sonyflake_repr},
+	{Py_am_aiter, sonyflake_aiter},
 	{0, 0},
 };
 
 PyType_Spec sonyflake_type_spec = {
 	.name = MODULE_NAME ".SonyFlake",
 	.basicsize = sizeof(struct sonyflake_state),
-	.flags = Py_TPFLAGS_DEFAULT,
+	.flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
 	.slots = sonyflake_type_slots,
 };

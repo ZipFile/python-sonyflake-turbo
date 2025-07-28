@@ -3,6 +3,7 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
+#include <assert.h>
 
 #define MODULE_NAME "sonyflake_turbo"
 #define SONYFLAKE_EPOCH 1409529600 // 2014-09-01 00:00:00 UTC
@@ -15,6 +16,7 @@
 
 typedef uint64_t sonyflake_time;
 struct sonyflake_state;
+struct sonyflake_module_state;
 extern PyType_Slot sonyflake_type_slots[];
 extern PyType_Spec sonyflake_type_spec;
 extern PyModuleDef_Slot sonyflake_slots[];
@@ -25,16 +27,16 @@ const static struct timespec default_start_time = {
 	.tv_nsec = 0
 };
 
-inline sonyflake_time to_sonyflake_time(const struct timespec *ts) {
+static inline sonyflake_time to_sonyflake_time(const struct timespec *ts) {
 	return ts->tv_sec * 100 + ts->tv_nsec / 10000000;
 }
 
-inline void from_sonyflake_time(sonyflake_time sf_time, struct timespec *ts) {
+static inline void from_sonyflake_time(sonyflake_time sf_time, struct timespec *ts) {
 	ts->tv_sec = sf_time / 100;
 	ts->tv_nsec = (sf_time % 100) * 10000000;
 }
 
-inline void sub_diff(struct timespec *a, const struct timespec *b) {
+static inline void sub_diff(struct timespec *a, const struct timespec *b) {
 	a->tv_sec -= b->tv_sec;
 	a->tv_nsec -= b->tv_nsec;
 
@@ -44,9 +46,12 @@ inline void sub_diff(struct timespec *a, const struct timespec *b) {
 	}
 }
 
-inline uint64_t get_time_to_usleep(const struct timespec *diff) {
+static inline uint64_t get_time_to_usleep(const struct timespec *diff) {
 	return diff->tv_sec * 1000000 + diff->tv_nsec / 1000;
 }
 
 PyObject *sonyflake_next(struct sonyflake_state *self, uint64_t *to_usleep);
 PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, uint64_t *to_usleep);
+PyObject *sonyflake_get_async_sleep(struct sonyflake_state *self);
+PyObject *sonyflake_get_aiter_cls(PyObject *self);
+PyObject *sonyflake_get_cls(PyObject *self);
