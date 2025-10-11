@@ -16,7 +16,7 @@ int cmp_machine_ids(const void *a, const void *b) {
 	return (*(uint16_t *)a - *(uint16_t *)b);
 }
 
-void sort_machine_ids(uint16_t *machine_ids, size_t machine_ids_len) {
+void sort_machine_ids(uint16_t *machine_ids, int machine_ids_len) {
 	if (machine_ids_len <= 1) {
 		return;
 	}
@@ -24,12 +24,12 @@ void sort_machine_ids(uint16_t *machine_ids, size_t machine_ids_len) {
 	qsort(machine_ids, machine_ids_len, sizeof(uint16_t), cmp_machine_ids);
 }
 
-bool has_machine_id_dupes(const uint16_t *machine_ids, size_t machine_ids_len) {
+bool has_machine_id_dupes(const uint16_t *machine_ids, int machine_ids_len) {
 	if (machine_ids_len <= 1) {
 		return false;
 	}
 
-	for (size_t i = 1; i < machine_ids_len; i++) {
+	for (int i = 1; i < machine_ids_len; i++) {
 		if (machine_ids[i] == machine_ids[i - 1]) {
 			return true;
 		}

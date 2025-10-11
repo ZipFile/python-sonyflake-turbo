@@ -10,8 +10,8 @@ struct machine_id_lcg_state;
 extern PyType_Slot machine_id_lcg_slots[];
 extern PyType_Spec machine_id_lcg_spec;
 
-void sort_machine_ids(uint16_t *machine_ids, size_t machine_ids_len);
-bool has_machine_id_dupes(const uint16_t *machine_ids, size_t machine_ids_len);
+void sort_machine_ids(uint16_t *machine_ids, int machine_ids_len);
+bool has_machine_id_dupes(const uint16_t *machine_ids, int machine_ids_len);
 
 static inline uint16_t machine_id_lcg(uint32_t x) {
 	return (32309 * x + 13799) % 65536;
