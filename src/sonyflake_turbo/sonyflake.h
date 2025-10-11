@@ -44,9 +44,5 @@ static inline void sub_diff(struct timespec *a, const struct timespec *b) {
 	}
 }
 
-static inline uint64_t get_time_to_usleep(const struct timespec *diff) {
-	return diff->tv_sec * 1000000 + diff->tv_nsec / 1000;
-}
-
-PyObject *sonyflake_next(struct sonyflake_state *self, uint64_t *to_usleep);
-PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, uint64_t *to_usleep);
+PyObject *sonyflake_next(struct sonyflake_state *self, struct timespec *to_nanosleep);
+PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, struct timespec *to_nanosleep);
