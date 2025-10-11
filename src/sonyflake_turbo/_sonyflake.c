@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
-#include <unistd.h>
 
 #include "sonyflake.h"
 #include "machine_ids.h"

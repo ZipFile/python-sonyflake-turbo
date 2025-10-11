@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
-#include <unistd.h>
 
 #include "sonyflake.h"
 #include "machine_ids.h"
@@ -18,7 +17,7 @@ struct sonyflake_state {
 	sonyflake_time elapsed_time;
 	uint32_t combined_sequence;
 	uint16_t *machine_ids;
-	size_t machine_ids_len;
+	Py_ssize_t machine_ids_len;
 };
 
 uint64_t compose(const struct sonyflake_state *self) {
@@ -114,7 +113,7 @@ static int sonyflake_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 		self->machine_ids[i] = (uint16_t) machine_id;
 	}
 
-	self->machine_ids_len = (size_t) machine_ids_len;
+	self->machine_ids_len = machine_ids_len;
 
 	sort_machine_ids(self->machine_ids, self->machine_ids_len);
 
@@ -290,7 +289,7 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 
 	PyList_SetItem(args_list, self->machine_ids_len, s);
 
-	for (size_t i = 0; i < self->machine_ids_len; i++) {
+	for (Py_ssize_t i = 0; i < self->machine_ids_len; i++) {
 		s = PyUnicode_FromFormat("%u", (unsigned) self->machine_ids[i]);
 
 		if (!s) {
@@ -298,7 +297,7 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 			return NULL;
 		}
 
-		PyList_SetItem(args_list, (Py_ssize_t) i, s);
+		PyList_SetItem(args_list, i, s);
 	}
 
 	s = PyUnicode_FromString(", ");
