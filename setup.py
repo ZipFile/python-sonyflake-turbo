@@ -18,8 +18,8 @@ else:
     cflags.append("-std=c17")
 
 if py_limited_api:
-    options["bdist_wheel"] = {"py_limited_api": "cp38"}
-    define_macros.append(("Py_LIMITED_API", "0x030800f0"))
+    options["bdist_wheel"] = {"py_limited_api": "cp310"}
+    define_macros.append(("Py_LIMITED_API", "0x030a00f0"))
 
 setup(
     options=options,
