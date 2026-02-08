@@ -5,7 +5,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
+
+#if !__STDC_NO_THREADS__
 #include <threads.h>
+#endif
 
 #include "sonyflake.h"
 #include "machine_ids.h"
@@ -193,13 +196,22 @@ static PyObject *sonyflake_sleep(PyObject *obj, struct timespec *to_nanosleep) {
 	int ret = 0;
 
 	Py_BEGIN_ALLOW_THREADS;
+#if __STDC_NO_THREADS__
+	ret = nanosleep(to_nanosleep, NULL);
+#else
 	ret = thrd_sleep(to_nanosleep, NULL);
+#endif
 	Py_END_ALLOW_THREADS;
 
 	if (ret == 0) {
 		return obj;
 	}
 
+#if __STDC_NO_THREADS__
+	if (ret < 0 && errno == EINTR && PyErr_CheckSignals()) {
+		goto err;
+	}
+#else
 	if (ret == -1) {
 		if (PyErr_CheckSignals()) {
 			goto err;
@@ -207,6 +219,7 @@ static PyObject *sonyflake_sleep(PyObject *obj, struct timespec *to_nanosleep) {
 
 		return obj;
 	}
+#endif
 
 	PyErr_SetFromErrno(PyExc_OSError);
 err:
