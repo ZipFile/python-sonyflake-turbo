@@ -1,6 +1,9 @@
+import signal
 import sysconfig
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from time import sleep
 
 from pytest import mark, raises
 
@@ -71,6 +74,43 @@ def test_sonyflake(use_iter: bool, n: int) -> None:
     assert len(ids) == n
     assert len(set(ids)) == len(ids)
     assert sorted(ids) == ids
+
+
+@mark.skipif(
+    not hasattr(signal, "pthread_kill"),
+    reason="pthread_kill not supported",
+)
+def test_sonyflake_sigint() -> None:
+    sf = SonyFlake(0x0000, start_time=1749081600)
+    thread_id = threading.get_ident()
+
+    def thread_func() -> None:
+        sleep(0.1)
+        signal.pthread_kill(thread_id, signal.SIGINT)
+
+    threading.Thread(target=thread_func).start()
+
+    with raises(KeyboardInterrupt):
+        sf(50000)
+
+
+@mark.skipif(
+    not hasattr(signal, "pthread_kill"),
+    reason="pthread_kill not supported",
+)
+def test_sonyflake_sigusr() -> None:
+    sf = SonyFlake(0x0000, start_time=1749081600)
+    thread_id = threading.get_ident()
+
+    signal.signal(signal.SIGUSR1, lambda *_: None)
+
+    def thread_func() -> None:
+        sleep(0.1)
+        signal.pthread_kill(thread_id, signal.SIGUSR1)
+
+    threading.Thread(target=thread_func).start()
+
+    assert len(sf(50000)) == 50000
 
 
 def test_sonyflake_repr() -> None:
