@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
+#include <threads.h>
 
 #include "sonyflake.h"
 #include "machine_ids.h"
@@ -34,7 +35,7 @@ bool incr_combined_sequence(struct sonyflake_state *self) {
 }
 
 static inline void get_relative_current_time(struct sonyflake_state *self, struct timespec *now) {
-	clock_gettime(CLOCK_REALTIME, now);
+	timespec_get(now, TIME_UTC);
 	sub_diff(now, &self->start_time);
 }
 
@@ -329,7 +330,7 @@ static PyObject *sonyflake_iternext(struct sonyflake_state *self) {
 
 	if (sonyflake_id && to_nanosleep.tv_sec == 0 && to_nanosleep.tv_nsec == 0) {
 		Py_BEGIN_ALLOW_THREADS;
-		nanosleep(&to_nanosleep, NULL);
+		thrd_sleep(&to_nanosleep, NULL);
 		Py_END_ALLOW_THREADS;
 	}
 
@@ -353,7 +354,7 @@ static PyObject *sonyflake_call(struct sonyflake_state *self, PyObject *args) {
 
 	if (sonyflake_ids && to_nanosleep.tv_sec == 0 && to_nanosleep.tv_nsec == 0) {
 		Py_BEGIN_ALLOW_THREADS;
-		nanosleep(&to_nanosleep, NULL);
+		thrd_sleep(&to_nanosleep, NULL);
 		Py_END_ALLOW_THREADS;
 	}
 

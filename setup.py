@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from setuptools import Extension, setup
 
 options: Dict[str, Any] = {}
-define_macros: List[Tuple[str, Optional[str]]] = [("_POSIX_C_SOURCE", "200809L")]
+define_macros: List[Tuple[str, Optional[str]]] = []
 py_limited_api: bool = not sysconfig.get_config_var("Py_GIL_DISABLED")
 cflags: List[str] = []
 
