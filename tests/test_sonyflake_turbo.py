@@ -3,7 +3,7 @@ import sysconfig
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from time import sleep
+from time import sleep, perf_counter
 
 from pytest import mark, raises
 
@@ -109,8 +109,12 @@ def test_sonyflake_sigusr() -> None:
         signal.pthread_kill(thread_id, signal.SIGUSR1)
 
     threading.Thread(target=thread_func).start()
+    a = perf_counter()
+    ids = sf(50000)
+    b = perf_counter()
 
-    assert len(sf(50000)) == 50000
+    assert len(ids) == 50000
+    assert (b - a) > 1  # should take roughly 1.9sec
 
 
 def test_sonyflake_repr() -> None:
