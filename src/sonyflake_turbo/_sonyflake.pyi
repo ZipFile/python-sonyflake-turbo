@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Callable, Awaitable, TypeAlias, TypeVar
 
 try:
     from typing import Self
@@ -12,6 +12,17 @@ SONYFLAKE_MACHINE_ID_BITS: int
 SONYFLAKE_MACHINE_ID_MAX: int
 SONYFLAKE_MACHINE_ID_OFFSET: int
 SONYFLAKE_TIME_OFFSET: int
+AsyncSleep: TypeAlias = Callable[[float], Awaitable[None]]
+T = TypeVar("T")
+
+
+async def sleep_wrapper(obj: T, sleep: AsyncSleep, to_sleep: float) -> T:
+    """C version of:
+
+    async def sleep_wrapper(obj, sleep, to_sleep):
+        await sleep(to_sleep)
+        return obj
+    """
 
 class SonyFlake:
     def __init__(self, *machine_id: int, start_time: Optional[int] = None):

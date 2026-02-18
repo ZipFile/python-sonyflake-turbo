@@ -6,11 +6,13 @@
 #include "module.h"
 #include "sonyflake.h"
 #include "machine_ids.h"
+#include "sleep_wrapper.h"
 
 static int sonyflake_module_traverse(PyObject *m, visitproc visit, void *arg) {
 	struct sonyflake_module_state *state = PyModule_GetState(m);
 	Py_VISIT(state->sonyflake_cls);
 	Py_VISIT(state->machine_id_lcg_cls);
+	Py_VISIT(state->sleep_wrapper_cls);
 	return 0;
 }
 
@@ -18,6 +20,7 @@ static int sonyflake_module_clear(PyObject *m) {
 	struct sonyflake_module_state *state = PyModule_GetState(m);
 	Py_CLEAR(state->sonyflake_cls);
 	Py_CLEAR(state->machine_id_lcg_cls);
+	Py_CLEAR(state->sleep_wrapper_cls);
 	return 0;
 }
 
@@ -81,6 +84,16 @@ static int sonyflake_exec(PyObject *module) {
 		goto err;
 	}
 
+	state->sleep_wrapper_cls = PyType_FromModuleAndSpec(module, &sleep_wrapper_type_spec, NULL);
+
+	if (!state->sleep_wrapper_cls) {
+		goto err;
+	}
+
+	if (PyModule_AddObjectRef(module, "sleep_wrapper", state->sleep_wrapper_cls) < 0) {
+		goto err;
+	}
+
 	PyModule_AddIntMacro(module, SONYFLAKE_EPOCH);
 	PyModule_AddIntMacro(module, SONYFLAKE_SEQUENCE_BITS);
 	PyModule_AddIntMacro(module, SONYFLAKE_SEQUENCE_MAX);
@@ -92,6 +105,7 @@ static int sonyflake_exec(PyObject *module) {
 	return 0;
 
 err:
+	Py_CLEAR(state->sleep_wrapper_cls);
 	Py_CLEAR(state->machine_id_lcg_cls);
 	Py_CLEAR(state->sonyflake_cls);
 
