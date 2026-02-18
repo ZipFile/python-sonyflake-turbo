@@ -3,8 +3,8 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
+#include "module.h"
 
-#define MODULE_NAME "sonyflake_turbo"
 #define SONYFLAKE_EPOCH 1409529600 // 2014-09-01 00:00:00 UTC
 #define SONYFLAKE_SEQUENCE_BITS 8
 #define SONYFLAKE_SEQUENCE_MAX ((1 << SONYFLAKE_SEQUENCE_BITS) - 1)
