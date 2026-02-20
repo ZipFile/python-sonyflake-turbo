@@ -8,7 +8,6 @@
 
 struct sonyflake_module_state {
 	PyObject *sonyflake_cls;
-	PyObject *async_sonyflake_cls;
 	PyObject *machine_id_lcg_cls;
 	PyObject *sleep_wrapper_cls;
 };

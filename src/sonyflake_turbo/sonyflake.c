@@ -182,10 +182,6 @@ static void sonyflake_dealloc(struct sonyflake_state *self) {
 }
 
 static PyObject *sonyflake_sleep(PyObject *obj, struct sonyflake_next_sleep_info *sleep_info) {
-	if (!(obj && sleep_info)) {
-		return NULL;
-	}
-
 	struct timespec duration, now = sleep_info->now;
 	int ret = 0;
 
@@ -240,10 +236,8 @@ PyObject *sonyflake_next(struct sonyflake_state *self, struct sonyflake_next_sle
 
 	get_relative_current_time(self, &now, &sf_now);
 
-	if (sleep_info) {
-		sleep_info->now = now;
-		sleep_info->future = now;
-	}
+	sleep_info->now = now;
+	sleep_info->future = now;
 
 	current = to_sonyflake_time(&sf_now);
 
@@ -253,9 +247,7 @@ PyObject *sonyflake_next(struct sonyflake_state *self, struct sonyflake_next_sle
 	} else if (incr_combined_sequence(self)) {
 		self->elapsed_time++;
 
-		if (sleep_info) {
-			from_sonyflake_time(&self->start_time, self->elapsed_time, &sleep_info->future);
-		}
+		from_sonyflake_time(&self->start_time, self->elapsed_time, &sleep_info->future);
 	}
 
 	sonyflake_id = compose(self);
@@ -266,7 +258,13 @@ PyObject *sonyflake_next(struct sonyflake_state *self, struct sonyflake_next_sle
 }
 
 PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, struct sonyflake_next_sleep_info *sleep_info) {
-	assert(n > 0);
+	if (n < 1) {
+		sleep_info->now.tv_sec = 0;
+		sleep_info->now.tv_nsec = 0;
+		sleep_info->future.tv_sec = 0;
+		sleep_info->future.tv_nsec = 0;
+		return PyList_New(0);
+	}
 
 	PyObject *out = PyList_New(n);
 
@@ -302,33 +300,10 @@ PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, struct so
 
 	PyThread_release_lock(self->lock);
 
-	if (sleep_info) {
-		timespec_get(&sleep_info->now, TIME_UTC);
-		from_sonyflake_time(&self->start_time, self->elapsed_time, &sleep_info->future);
-	}
+	timespec_get(&sleep_info->now, TIME_UTC);
+	from_sonyflake_time(&self->start_time, self->elapsed_time, &sleep_info->future);
 
 	return out;
-}
-
-PyObject *sonyflake_next_py(struct sonyflake_state *self, PyObject *args, struct sonyflake_next_sleep_info *sleep_info) {
-	Py_ssize_t n = 0;
-
-	if (args) {
-		if (!PyArg_ParseTuple(args, "n", &n)) {
-			return NULL;
-		}
-
-		if (n <= 0) {
-			PyErr_SetString(PyExc_ValueError, "n must be positive");
-			return NULL;
-		}
-	}
-
-	if (n > 0) {
-		return sonyflake_next_n(self, n, sleep_info);
-	}
-
-	return sonyflake_next(self, sleep_info);
 }
 
 static PyObject *sonyflake_repr(struct sonyflake_state *self) {
@@ -384,13 +359,53 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 static PyObject *sonyflake_iternext(struct sonyflake_state *self) {
 	struct sonyflake_next_sleep_info sleep_info;
 
-	return sonyflake_sleep(sonyflake_next_py(self, NULL, &sleep_info), &sleep_info);
+	return sonyflake_sleep(sonyflake_next(self, &sleep_info), &sleep_info);
 }
 
 static PyObject *sonyflake_call(struct sonyflake_state *self, PyObject *args) {
 	struct sonyflake_next_sleep_info sleep_info;
+	Py_ssize_t n = 0;
 
-	return sonyflake_sleep(sonyflake_next_py(self, args, &sleep_info), &sleep_info);
+	if (!PyArg_ParseTuple(args, "n", &n)) {
+		return NULL;
+	}
+
+	return sonyflake_sleep(sonyflake_next_n(self, n, &sleep_info), &sleep_info);
+}
+
+static PyObject *sonyflake_raw(PyObject *py_self, PyObject *arg)
+{
+	struct sonyflake_state *self = (struct sonyflake_state *) py_self;
+	struct sonyflake_next_sleep_info sleep_info;
+	PyObject *obj, *duration;
+	long n = 0;
+
+	if (arg == NULL || Py_Is(arg, Py_None)) {
+		obj = sonyflake_next(self, &sleep_info);
+	} else {
+		n = PyLong_AsSsize_t(arg);
+
+		if (n == -1 && PyErr_Occurred()) {
+			return NULL;
+		}
+
+		obj = sonyflake_next_n(self, n, &sleep_info);
+	}
+
+	if (!obj) {
+		return NULL;
+	}
+
+	sub_diff(&sleep_info.future, &sleep_info.now);
+
+	duration = PyFloat_FromDouble(timespec_to_double(&sleep_info.future));
+
+	if (!duration) {
+		Py_DECREF(obj);
+		return NULL;
+	}
+
+	return PyTuple_Pack(2, obj, duration);
 }
 
 PyDoc_STRVAR(sonyflake_doc,
@@ -403,6 +418,20 @@ PyDoc_STRVAR(sonyflake_doc,
 "    Implementation uses thread locks and blocking sleeps.\n"
 );
 
+static PyMethodDef sonyflake_methods[] = {
+	{
+		"_raw",
+		sonyflake_raw,
+		METH_O,
+		PyDoc_STR(
+			"_raw($self, n, /)\n"
+			"--\n\n"
+			"Return tuple of id (n=None) or ids (n=int) and time to sleep (in seconds) until next id is available."
+		)
+	},
+	{NULL, NULL, 0, NULL}
+};
+
 PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_alloc, PyType_GenericAlloc},
 	{Py_tp_dealloc, sonyflake_dealloc},
@@ -413,6 +442,7 @@ PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_call, sonyflake_call},
 	{Py_tp_doc, (void *) sonyflake_doc},
 	{Py_tp_repr, sonyflake_repr},
+	{Py_tp_methods, sonyflake_methods},
 	{0, 0},
 };
 

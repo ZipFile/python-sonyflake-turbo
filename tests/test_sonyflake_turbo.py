@@ -72,6 +72,11 @@ def test_sonyflake(use_iter: bool, n: int) -> None:
     assert sorted(ids) == ids
 
 
+@mark.parametrize("n", [-1, 0])
+def test_sonyflake_zero(n: int) -> None:
+    assert SonyFlake(0x0000)(0) == []
+
+
 @mark.skipif(
     not hasattr(signal, "pthread_kill"),
     reason="pthread_kill not supported",

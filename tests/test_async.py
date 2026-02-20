@@ -93,3 +93,11 @@ async def test_with_threads() -> None:
     assert len(ids) == n * 2
     assert len(set(ids)) == len(ids)
     assert sorted(ids) == ids
+
+
+@mark.asyncio
+async def test_zero() -> None:
+    sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
+    asf = AsyncSonyFlake(sf, asyncio.sleep)
+
+    assert len(await asf(0)) == 0

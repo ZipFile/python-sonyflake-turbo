@@ -1,4 +1,4 @@
-from typing import Awaitable, Callable, Generator, List, Optional, TypeAlias, TypeVar
+from typing import overload
 
 try:
     from typing import Self
@@ -12,19 +12,9 @@ SONYFLAKE_MACHINE_ID_BITS: int
 SONYFLAKE_MACHINE_ID_MAX: int
 SONYFLAKE_MACHINE_ID_OFFSET: int
 SONYFLAKE_TIME_OFFSET: int
-AsyncSleep: TypeAlias = Callable[[float], Awaitable[None]]
-T = TypeVar("T")
-
-async def sleep_wrapper(obj: T, sleep: AsyncSleep, to_sleep: float) -> T:
-    """C version of:
-
-    async def sleep_wrapper(obj, sleep, to_sleep):
-        await sleep(to_sleep)
-        return obj
-    """
 
 class SonyFlake:
-    def __init__(self, *machine_id: int, start_time: Optional[int] = None):
+    def __init__(self, *machine_id: int, start_time: int | None = None):
         """Initialize SonyFlake ID generator.
 
         Args:
@@ -47,7 +37,7 @@ class SonyFlake:
     def __next__(self) -> int:
         """Produce a SonyFlake ID."""
 
-    def __call__(self, n: int, /) -> List[int]:
+    def __call__(self, n: int, /) -> list[int]:
         """Generate multiple SonyFlake IDs at once.
 
         Roughly equivalent to `[next(sf) for _ in range(n)]`, but more
@@ -68,76 +58,10 @@ class SonyFlake:
             List of ids.
         """
 
-class AsyncSonyFlake:
-    """Async wrapper for :class:`SonyFlake`.
-
-    Implements Awaitable and AsyncIterator protocols.
-
-    Important:
-        Main state is stored in SonyFlake. This class has minimum logic on its
-        own, the only difference is that instead of doing thread-blocking sleep,
-        it is delegated to the provided ``sleep``. Instance of
-        class:`sleep_wrapper` is returned in ``__call__``, ``__anext__`` and
-        ``__await``.
-
-    Usage:
-
-        .. code-block:: python
-
-            import asyncio
-
-            sf = SonyFlake(0x1337, 0xCAFE, start_time=1749081600)
-            asf = AsyncSonyFlake(sf, asyncio.sleep)
-
-            print(await asf)
-            print(await asf(5))
-
-            async for id_ in asf:
-                print(id_)
-                break  # AsyncSonyFlake is an infinite generator
-    """
-
-    def __init__(self, sf: SonyFlake, sleep: AsyncSleep) -> None:
-        """Initialize AsyncSonyFlake ID generator.
-
-        Args:
-            sf: Instance of the :class:`SonyFlake`.
-            sleep: Either `asyncio.sleep` or `trio.sleep`.
-
-        Raises:
-            ValueError: Invalid values of ``machine_id`` or ``start_time``.
-            TypeError: ``machine_id`` or ``start_time`` are not integers.
-        """
-
-    def __call__(self, n: int) -> Awaitable[list[int]]:
-        """Generate multiple SonyFlake IDs at once.
-
-        Roughly equivalent to `[await asf for _ in range(n)]`, but more
-        efficient. This method saves on task/context switches and syscalls for
-        getting current time.
-
-        Important:
-            The more ids you request, the more other coroutines have to wait
-            upon the next id(s).
-
-        Args:
-            n: Number of ids to generate. Must be greater than 0.
-
-        Raises:
-            ValueError: if n <= 0
-
-        Returns:
-            List of ids.
-        """
-
-    def __await__(self) -> Generator[None, None, int]:
-        """Produce a SonyFlake ID."""
-
-    def __anext__(self) -> Awaitable[int]:
-        """Produce a SonyFlake ID."""
-
-    def __aiter__(self) -> Self:
-        """Returns ``self``."""
+    @overload
+    def _raw(self, n: int) -> tuple[list[int], float]: ...
+    @overload
+    def _raw(self, n: None) -> tuple[int, float]: ...
 
 class MachineIDLCG:
     """A simple LCG producing ints suitable to be used as ``machine_id``.

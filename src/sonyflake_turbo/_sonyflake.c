@@ -5,25 +5,19 @@
 
 #include "module.h"
 #include "sonyflake.h"
-#include "async.h"
 #include "machine_ids.h"
-#include "sleep_wrapper.h"
 
 static int sonyflake_module_traverse(PyObject *m, visitproc visit, void *arg) {
 	struct sonyflake_module_state *state = PyModule_GetState(m);
 	Py_VISIT(state->sonyflake_cls);
-	Py_VISIT(state->async_sonyflake_cls);
 	Py_VISIT(state->machine_id_lcg_cls);
-	Py_VISIT(state->sleep_wrapper_cls);
 	return 0;
 }
 
 static int sonyflake_module_clear(PyObject *m) {
 	struct sonyflake_module_state *state = PyModule_GetState(m);
 	Py_CLEAR(state->sonyflake_cls);
-	Py_CLEAR(state->async_sonyflake_cls);
 	Py_CLEAR(state->machine_id_lcg_cls);
-	Py_CLEAR(state->sleep_wrapper_cls);
 	return 0;
 }
 
@@ -65,9 +59,7 @@ static int sonyflake_exec(PyObject *module) {
 	struct sonyflake_module_state *state = PyModule_GetState(module);
 
 	state->sonyflake_cls = NULL;
-	state->async_sonyflake_cls = NULL;
 	state->machine_id_lcg_cls = NULL;
-	state->sleep_wrapper_cls = NULL;
 
 	state->sonyflake_cls = PyType_FromModuleAndSpec(module, &sonyflake_type_spec, NULL);
 
@@ -79,16 +71,6 @@ static int sonyflake_exec(PyObject *module) {
 		goto err;
 	}
 
-	state->async_sonyflake_cls = PyType_FromModuleAndSpec(module, &async_sonyflake_type_spec, NULL);
-
-	if (!state->async_sonyflake_cls) {
-		goto err;
-	}
-
-	if (PyModule_AddObjectRef(module, "AsyncSonyFlake", state->async_sonyflake_cls) < 0) {
-		goto err;
-	}
-
 	state->machine_id_lcg_cls = PyType_FromModuleAndSpec(module, &machine_id_lcg_spec, NULL);
 
 	if (!state->machine_id_lcg_cls) {
@@ -96,16 +78,6 @@ static int sonyflake_exec(PyObject *module) {
 	}
 
 	if (PyModule_AddObjectRef(module, "MachineIDLCG", state->machine_id_lcg_cls) < 0) {
-		goto err;
-	}
-
-	state->sleep_wrapper_cls = PyType_FromModuleAndSpec(module, &sleep_wrapper_type_spec, NULL);
-
-	if (!state->sleep_wrapper_cls) {
-		goto err;
-	}
-
-	if (PyModule_AddObjectRef(module, "sleep_wrapper", state->sleep_wrapper_cls) < 0) {
 		goto err;
 	}
 
@@ -120,9 +92,7 @@ static int sonyflake_exec(PyObject *module) {
 	return 0;
 
 err:
-	Py_CLEAR(state->sleep_wrapper_cls);
 	Py_CLEAR(state->machine_id_lcg_cls);
-	Py_CLEAR(state->async_sonyflake_cls);
 	Py_CLEAR(state->sonyflake_cls);
 
 	return -1;
