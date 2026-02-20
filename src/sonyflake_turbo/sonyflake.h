@@ -68,5 +68,10 @@ static inline void sub_diff(struct timespec *a, const struct timespec *b) {
 	}
 }
 
+static inline double timespec_to_double(const struct timespec *ts) {
+	return ((double) ts->tv_sec) + ((double) ts->tv_nsec) / 1000000000.0;
+}
+
 PyObject *sonyflake_next(struct sonyflake_state *self, struct sonyflake_next_sleep_info *sleep_info);
 PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, struct sonyflake_next_sleep_info *sleep_info);
+PyObject *sonyflake_next_py(struct sonyflake_state *self, PyObject *args, struct sonyflake_next_sleep_info *sleep_info);

@@ -310,6 +310,27 @@ PyObject *sonyflake_next_n(struct sonyflake_state *self, Py_ssize_t n, struct so
 	return out;
 }
 
+PyObject *sonyflake_next_py(struct sonyflake_state *self, PyObject *args, struct sonyflake_next_sleep_info *sleep_info) {
+	Py_ssize_t n = 0;
+
+	if (args) {
+		if (!PyArg_ParseTuple(args, "n", &n)) {
+			return NULL;
+		}
+
+		if (n <= 0) {
+			PyErr_SetString(PyExc_ValueError, "n must be positive");
+			return NULL;
+		}
+	}
+
+	if (n > 0) {
+		return sonyflake_next_n(self, n, sleep_info);
+	}
+
+	return sonyflake_next(self, sleep_info);
+}
+
 static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 	PyObject *s, *args_list = PyList_New(self->machine_ids_len + 1);
 
@@ -363,27 +384,13 @@ static PyObject *sonyflake_repr(struct sonyflake_state *self) {
 static PyObject *sonyflake_iternext(struct sonyflake_state *self) {
 	struct sonyflake_next_sleep_info sleep_info;
 
-	PyObject *sonyflake_id = sonyflake_next(self, &sleep_info);
-
-	return sonyflake_sleep(sonyflake_id, &sleep_info);
+	return sonyflake_sleep(sonyflake_next_py(self, NULL, &sleep_info), &sleep_info);
 }
 
 static PyObject *sonyflake_call(struct sonyflake_state *self, PyObject *args) {
-	Py_ssize_t n = 0;
-
-	if (!PyArg_ParseTuple(args, "n", &n)) {
-		return NULL;
-	}
-
-	if (n <= 0) {
-		PyErr_SetString(PyExc_ValueError, "n must be positive");
-		return NULL;
-	}
-
 	struct sonyflake_next_sleep_info sleep_info;
-	PyObject *sonyflake_ids = sonyflake_next_n(self, n, &sleep_info);
 
-	return sonyflake_sleep(sonyflake_ids, &sleep_info);
+	return sonyflake_sleep(sonyflake_next_py(self, args, &sleep_info), &sleep_info);
 }
 
 PyDoc_STRVAR(sonyflake_doc,
