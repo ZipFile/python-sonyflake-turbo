@@ -3,7 +3,7 @@ requires = ["setuptools>=70.1"]
 
 [project]
 name = "sonyflake-turbo"
-version = "0.1.0"
+version = "1.0.0"
 authors = [
     {name = "Anatolii Aniskovych", email = "zipfile.d@protonmail.com"},
 ]
@@ -11,9 +11,9 @@ description = "A Sonyflake implementation optimized for extreme usages."
 readme = "README.rst"
 requires-python = ">=3.10"
 keywords = ["sonyflake"]
-license = {text = "BSD-2-Clause"}
+license = "BSD-2-Clause"
 classifiers = [
-    "License :: OSI Approved :: BSD License",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: Implementation :: CPython",
