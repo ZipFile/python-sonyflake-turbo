@@ -6,6 +6,7 @@ from ._sonyflake import (
     SONYFLAKE_SEQUENCE_BITS,
     SONYFLAKE_SEQUENCE_MAX,
     SONYFLAKE_TIME_OFFSET,
+    AsyncSonyFlake,
     MachineIDLCG,
     SonyFlake,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "SONYFLAKE_SEQUENCE_BITS",
     "SONYFLAKE_SEQUENCE_MAX",
     "SONYFLAKE_TIME_OFFSET",
+    "AsyncSonyFlake",
     "MachineIDLCG",
     "SonyFlake",
 ]

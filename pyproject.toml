@@ -31,6 +31,8 @@ dev = [
     "isort",
     "mypy",
     "pytest",
+    "pytest-asyncio",
+    "pytest-trio",
 ]
 
 [tool.setuptools]
@@ -66,4 +68,4 @@ warn_unused_configs = true
 
 [tool.cibuildwheel]
 test-command = "pytest --import-mode=importlib -p no:cacheprovider {project}/tests"
-test-requires = ["pytest"]
+test-requires = ["pytest", "pytest-asyncio", "pytest-trio"]

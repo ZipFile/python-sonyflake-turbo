@@ -45,6 +45,23 @@ Turbo mode:
         t = timeit(lambda: [next(sf) for _ in range(1000)], number=1000)
         print(f"Speed: 1M ids / {t:.2f}sec with {count} machine IDs")
 
+Async:
+
+.. code-block:: python
+
+    from anyio import sleep  # AsyncSonyFlake supports both asyncio and trio
+    from sonyflake_turbo import AsyncSonyFlake, SonyFlake
+
+    sf = SonyFlake(0x1337, 0xCAFE, start_time=1749081600)
+    asf = AsyncSonyFlake(sf, sleep)
+
+    print(await asf)
+    print(await asf(5))
+
+    async for id_ in asf:
+        print(id_)
+        break
+
 Important Notes
 ===============
 

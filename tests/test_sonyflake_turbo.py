@@ -3,7 +3,7 @@ import sysconfig
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from time import sleep, perf_counter
+from time import perf_counter, sleep
 
 from pytest import mark, raises
 
@@ -57,11 +57,7 @@ def test_non_int_start_time() -> None:
 
 @mark.parametrize(
     ["use_iter", "n"],
-    [
-        (use_iter, n)
-        for use_iter in [True, False]
-        for n in [1, 100, 250000]
-    ],
+    [(use_iter, n) for use_iter in [True, False] for n in [1, 100, 250000]],
 )
 def test_sonyflake(use_iter: bool, n: int) -> None:
     sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
