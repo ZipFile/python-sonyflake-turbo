@@ -16,6 +16,9 @@ if sysconfig.get_platform().startswith("win"):
     cflags.append("/experimental:c11atomics")
 else:
     cflags.append("-std=c17")
+    cflags.append("-Wall")
+    cflags.append("-Wextra")
+    cflags.append("-Werror")
 
 if py_limited_api:
     options["bdist_wheel"] = {"py_limited_api": "cp310"}

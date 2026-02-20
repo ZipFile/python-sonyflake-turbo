@@ -20,7 +20,7 @@ extern PyType_Spec sonyflake_type_spec;
 extern PyModuleDef_Slot sonyflake_slots[];
 extern struct PyModuleDef sonyflake_module;
 
-const static struct timespec default_start_time = {
+static const struct timespec default_start_time = {
 	.tv_sec = SONYFLAKE_EPOCH,
 	.tv_nsec = 0
 };

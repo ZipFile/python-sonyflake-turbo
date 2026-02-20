@@ -43,7 +43,7 @@ static inline void get_relative_current_time(struct sonyflake_state *self, struc
 	sub_diff(sf_now, &self->start_time);
 }
 
-static PyObject *sonyflake_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
+static PyObject *sonyflake_new(PyTypeObject *type, PyObject *Py_UNUSED(args), PyObject *Py_UNUSED(kwargs)) {
 	allocfunc tp_alloc = PyType_GetSlot(type, Py_tp_alloc);
 
 	assert(tp_alloc != NULL);
@@ -404,7 +404,7 @@ PyType_Slot sonyflake_type_slots[] = {
 	{Py_tp_new, sonyflake_new},
 	{Py_tp_init, sonyflake_init},
 	{Py_tp_call, sonyflake_call},
-	{Py_tp_doc, sonyflake_doc},
+	{Py_tp_doc, (void *) sonyflake_doc},
 	{Py_tp_repr, sonyflake_repr},
 	{0, 0},
 };
