@@ -15,7 +15,7 @@ jobs:
     name: Build source tarball
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: actions/setup-python@v6
     - run: |
         python -m pip install --upgrade build
@@ -40,7 +40,7 @@ jobs:
         PIP_CONFIG_SETTINGS="build_ext=-j4"
         CFLAGS="-g0"
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Build sdist
       run: pipx run build --sdist
     - name: Build wheels
