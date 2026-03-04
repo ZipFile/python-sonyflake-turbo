@@ -78,6 +78,7 @@ static int sonyflake_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 	PyObject *start_time_obj = NULL;
 	Py_ssize_t machine_ids_len = 0;
 	long long start_time = 0;
+	struct timespec now = {0, 0};
 	long machine_id = 0;
 	Py_ssize_t i = 0;
 
@@ -145,6 +146,13 @@ static int sonyflake_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 	start_time = PyLong_AsLongLong(start_time_obj);
 
 	if (PyErr_Occurred()) {
+		goto err;
+	}
+
+	timespec_get(&now, TIME_UTC);
+
+	if (start_time >= now.tv_sec) {
+		PyErr_SetString(PyExc_ValueError, "start_time must be in the past");
 		goto err;
 	}
 

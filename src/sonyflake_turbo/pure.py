@@ -1,5 +1,5 @@
 from threading import Lock
-from time import sleep, time_ns
+from time import sleep, time, time_ns
 from typing import overload
 
 try:
@@ -74,6 +74,9 @@ class SonyFlake:
 
         if not isinstance(start_time, int):
             raise TypeError("start_time must be an integer")
+
+        if start_time >= time():
+            raise ValueError("start_time must be in the past")
 
         self._machine_ids = sorted(machine_ids_set)
         self._max_i = len(machine_ids_set) * SONYFLAKE_SEQUENCE_COUNT

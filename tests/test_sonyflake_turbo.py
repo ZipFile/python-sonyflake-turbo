@@ -3,7 +3,7 @@ import sysconfig
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from time import perf_counter, sleep
+from time import perf_counter, sleep, time
 
 from pytest import mark, raises
 
@@ -63,6 +63,10 @@ class TestSonyFlake:
                 0xFFFF,
                 start_time=datetime(2025, 1, 1),
             )
+
+    def test_start_time_in_future(self, cls: type) -> None:
+        with raises(ValueError, match=r"start_time must be in the past"):
+            cls(0x0000, start_time=int(time() + 10))
 
     @mark.parametrize(
         ["use_iter", "n"],
