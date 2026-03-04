@@ -52,7 +52,11 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true
+relative_files = true
 source = ["sonyflake_turbo"]
+
+[tool.coverage.report]
+show_missing = true
 
 [tool.isort]
 profile = "black"
@@ -71,4 +75,4 @@ warn_unused_configs = true
 
 [tool.cibuildwheel]
 test-command = "pytest --import-mode=importlib -p no:cacheprovider {project}/tests"
-test-requires = ["pytest", "pytest-asyncio", "pytest-trio"]
+test-requires = ["pytest", "pytest-cov", "pytest-asyncio", "pytest-trio"]
