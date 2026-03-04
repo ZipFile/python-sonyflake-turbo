@@ -101,7 +101,7 @@ class SonyFlake:
 
     def __repr__(self) -> str:
         cls = self.__class__.__name__
-        machine_ids = ", ".join(map(str, sorted(self._machine_ids)))
+        machine_ids = ", ".join(map(str, self._machine_ids))
         return f"{cls}({machine_ids}, start_time={self._start_time // 100})"
 
     @overload
