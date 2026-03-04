@@ -68,3 +68,6 @@ warn_unused_configs = true
 [tool.cibuildwheel]
 test-command = "pytest --import-mode=importlib -p no:cacheprovider {project}/tests"
 test-requires = ["pytest", "pytest-cov", "pytest-asyncio", "pytest-trio"]
+
+[tool.cibuildwheel.environment]
+SONYFLAKE_TURBO_BUILD_REQUIRED = "1"

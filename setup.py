@@ -6,7 +6,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from setuptools import Extension, setup
 
-build: bool = os.environ.get("SONYFLAKE_TURBO_BUILD", "1").lower() in ("1", "true")
+
+def get_bool(name: str, default: bool = False) -> bool:
+    try:
+        return os.environ[f"SONYFLAKE_TURBO_{name}"].lower() in ("1", "true")
+    except KeyError:
+        return default
+
+
+build: bool = get_bool("BUILD", True)
+build_required: bool = get_bool("BUILD_REQUIRED", False)
 options: Dict[str, Any] = {}
 define_macros: List[Tuple[str, Optional[str]]] = []
 py_limited_api: bool = not sysconfig.get_config_var("Py_GIL_DISABLED")
@@ -44,6 +53,7 @@ setup_kwargs = {
             define_macros=define_macros,
             py_limited_api=py_limited_api,
             extra_compile_args=cflags,
+            optional=not build_required,
         ),
     ],
 }
