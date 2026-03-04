@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import overload
 
 try:
@@ -13,7 +14,7 @@ SONYFLAKE_MACHINE_ID_MAX: int
 SONYFLAKE_MACHINE_ID_OFFSET: int
 SONYFLAKE_TIME_OFFSET: int
 
-class SonyFlake:
+class SonyFlake(Iterator[int]):
     def __init__(self, *machine_id: int, start_time: int | None = None):
         """Initialize SonyFlake ID generator.
 
@@ -63,7 +64,7 @@ class SonyFlake:
     @overload
     def _raw(self, n: None) -> tuple[int, float]: ...
 
-class MachineIDLCG:
+class MachineIDLCG(Iterator[int]):
     """A simple LCG producing ints suitable to be used as ``machine_id``.
 
     Intended to be used in examples, tests, or when concurrency is not an issue.
