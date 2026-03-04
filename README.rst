@@ -95,7 +95,8 @@ Install:
 
     python3 -m venv env
     . env/bin/activate
-    pip install -e .[dev]
+    pip install -r requirements-dev.txt
+    pip install -e .
 
 Run tests:
 

@@ -20,20 +20,12 @@ classifiers = [
     "Programming Language :: Python :: Free Threading :: 2 - Beta",
     "Intended Audience :: Developers",
 ]
+dependencies = [
+    "typing_extensions; python_version < '3.11'",
+]
 
 [project.urls]
 Source = "https://github.com/ZipFile/python-sonyflake-turbo"
-
-[project.optional-dependencies]
-dev = [
-    "flake8",
-    "flake8-pyproject",
-    "isort",
-    "mypy",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-trio",
-]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
