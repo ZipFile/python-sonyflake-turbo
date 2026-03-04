@@ -21,7 +21,7 @@ Easy mode:
 
     from sonyflake_turbo import SonyFlake
 
-    sf = SonyFlake(0x1337, 0xCAFE)
+    sf = SonyFlake(0x1337, 0xCAFE, start_time=1749081600)
 
     for _, id_ in zip(range(10), sf):
         print(f"{id_:016x}")
@@ -79,6 +79,10 @@ you won't get much performance gain from multithreaded usage. Consider
 creating generators per thread instead of sharing them across multiple
 threads.
 
+This library also contains pure-Python implementation as a fallback in case of
+C extension unavailability (e.g. with PyPy or when installed with
+``--no-binary`` flag).
+
 Development
 ===========
 
@@ -102,3 +106,9 @@ Building wheels:
 
     pip install cibuildwheel
     cibuildwheel
+
+Building ``py3-none-any`` wheel (without C extension):
+
+.. code-block:: sh
+
+    SONYFLAKE_TURBO_BUILD=0 python -m build --wheel
