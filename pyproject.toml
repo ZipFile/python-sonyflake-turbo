@@ -43,6 +43,9 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.exclude-package-data]
+sonyflake_turbo = ["*.c", "*.h"]
+
 [tool.pytest]
 minversion = "9.0"
 testpaths = ["tests"]
