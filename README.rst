@@ -23,26 +23,29 @@ Easy mode:
 
     sf = SonyFlake(0x1337, 0xCAFE, start_time=1749081600)
 
-    for _, id_ in zip(range(10), sf):
-        print(f"{id_:016x}")
+    print("one", next(sf))
+    print("n", sf(5))
+
+    for id_ in sf:
+        print("iter", id_)
+        break
 
 Turbo mode:
 
 .. code-block:: python
 
-    from datetime import datetime, timezone
-    from random import sample
+    from time import time_ns
     from timeit import timeit
 
-    from sonyflake_turbo import SONYFLAKE_MACHINE_ID_MAX, MachineIDLCG, SonyFlake
+    from sonyflake_turbo import MachineIDLCG, SonyFlake
 
-    get_machine_id = MachineIDLCG(int(datetime.now(tz=timezone.utc).timestamp()))
-    epoch = datetime(2025, 6, 5, tzinfo=timezone.utc)
+    get_machine_id = MachineIDLCG(time_ns())
+    EPOCH = 1749081600  # 2025-06-05T00:00:00Z
 
     for count in [32, 16, 8, 4, 2, 1]:
-        machine_ids = sample(range(SONYFLAKE_MACHINE_ID_MAX + 1), count)
-        sf = SonyFlake(*machine_ids, start_time=int(epoch.timestamp()))
-        t = timeit(lambda: [next(sf) for _ in range(1000)], number=1000)
+        machine_ids = [get_machine_id() for _ in range(count)]
+        sf = SonyFlake(*machine_ids, start_time=EPOCH)
+        t = timeit(lambda: sf(1000), number=1000)
         print(f"Speed: 1M ids / {t:.2f}sec with {count} machine IDs")
 
 Async:
@@ -55,11 +58,11 @@ Async:
     sf = SonyFlake(0x1337, 0xCAFE, start_time=1749081600)
     asf = AsyncSonyFlake(sf, sleep)
 
-    print(await asf)
-    print(await asf(5))
+    print("one", await asf)
+    print("n", await asf(5))
 
     async for id_ in asf:
-        print(id_)
+        print("aiter", id_)
         break
 
 Important Notes
