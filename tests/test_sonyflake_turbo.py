@@ -7,82 +7,116 @@ from time import perf_counter, sleep
 
 from pytest import mark, raises
 
-from sonyflake_turbo import MachineIDLCG, SonyFlake
+from sonyflake_turbo._sonyflake import MachineIDLCG as CMachineIDLCG
+from sonyflake_turbo._sonyflake import SonyFlake as CSonyFlake
+from sonyflake_turbo.pure import MachineIDLCG as PyMachineIDLCG
+from sonyflake_turbo.pure import SonyFlake as PySonyFlake
+
+START_TIME = 1749081600
 
 
-def test_no_machine_ids() -> None:
-    with raises(ValueError, match=r"At least one machine ID must be provided"):
-        SonyFlake()
+@mark.parametrize("cls", [CMachineIDLCG, PyMachineIDLCG], ids=["c", "py"])
+class TestMachineIDLCG:
+    def test_machine_id_lcg(self, cls: type) -> None:
+        lcg = cls(123)
+        ids_seq = list(range(65536))
+        ids_rng = [next(lcg) for _ in range(65536)]
+
+        assert not (set(ids_seq) - set(ids_rng))
+        assert ids_seq != ids_rng
+
+    def test_machine_id_lcg_repr(self, cls: type) -> None:
+        assert repr(cls(57243)) == "MachineIDLCG(57243)"
 
 
-def test_too_many_machine_ids() -> None:
-    with raises(ValueError, match=r"Too many machine IDs, maximum is 65536"):
-        SonyFlake(*(i for i in range(65537)))
+@mark.parametrize("cls", [CSonyFlake, PySonyFlake], ids=["c", "py"])
+class TestSonyFlake:
+    def test_no_machine_ids(self, cls: type) -> None:
+        with raises(ValueError, match=r"At least one machine ID must be provided"):
+            cls()
 
+    def test_too_many_machine_ids(self, cls: type) -> None:
+        with raises(ValueError, match=r"Too many machine IDs, maximum is 65536"):
+            cls(*(i for i in range(65537)))
 
-@mark.xfail
-def test_no_memory() -> None:
-    with raises(MemoryError):
-        SonyFlake(0x0000, 0x7F7F, 0xFFFF)
+    def test_non_int_machine_ids(self, cls: type) -> None:
+        with raises(TypeError, match=r"Machine IDs must be integers"):
+            cls(0x0000, "0x7F7F", object())
 
+    @mark.parametrize("machine_id", [-1, 65536])
+    def test_bad_machine_ids(self, machine_id: int, cls: type) -> None:
+        with raises(
+            ValueError,
+            match=r"Machine IDs must be in range \[0, 65535\]",
+        ):
+            cls(machine_id)
 
-def test_non_int_machine_ids() -> None:
-    with raises(TypeError, match=r"Machine IDs must be integers"):
-        SonyFlake(0x0000, "0x7F7F", object())  # type: ignore[arg-type]
+    def test_machine_id_dupes(self, cls: type) -> None:
+        with raises(ValueError, match=r"Duplicate machine IDs are not allowed"):
+            cls(0x7F7F, 0x0000, 0xFFFF, 0x7F7F)
 
+    def test_non_int_start_time(self, cls: type) -> None:
+        with raises(TypeError, match=r"start_time must be an integer"):
+            cls(
+                0x0000,
+                0x7F7F,
+                0xFFFF,
+                start_time=datetime(2025, 1, 1),
+            )
 
-@mark.parametrize("machine_id", [-1, 65536])
-def test_bad_machine_ids(machine_id: int) -> None:
-    with raises(
-        ValueError,
-        match=r"Machine IDs must be in range \[0, 65535\]",
-    ):
-        SonyFlake(machine_id)
+    @mark.parametrize(
+        ["use_iter", "n"],
+        [(use_iter, n) for use_iter in [True, False] for n in [1, 100, 250000]],
+    )
+    def test_sonyflake(self, use_iter: bool, n: int, cls: type) -> None:
+        sf = cls(0x0000, 0x7F7F, 0xFFFF, start_time=START_TIME)
 
+        if use_iter:
+            it = iter(sf)
+            ids = [next(it) for _ in range(n)]
+        else:
+            ids = sf(n)
 
-def test_machine_id_dupes() -> None:
-    with raises(ValueError, match=r"Duplicate machine IDs are not allowed"):
-        SonyFlake(0x7F7F, 0x0000, 0xFFFF, 0x7F7F)
+        assert len(ids) == n
+        assert len(set(ids)) == len(ids)
+        assert sorted(ids) == ids
 
+    def test_sonyflake_n_twice(self, cls: type) -> None:
+        sf = cls(0x0000, 0x7F7F, 0xFFFF, start_time=START_TIME)
+        ids = [*sf(2), *sf(2)]
 
-def test_non_int_start_time() -> None:
-    with raises(TypeError, match=r"start_time must be an integer"):
-        SonyFlake(
-            0x0000,
-            0x7F7F,
-            0xFFFF,
-            start_time=datetime(2025, 1, 1),  # type: ignore[arg-type]
-        )
+        assert len(ids) == 4
+        assert len(set(ids)) == len(ids)
+        assert sorted(ids) == ids
 
+    @mark.parametrize("n", [-1, 0])
+    def test_sonyflake_zero(self, n: int, cls: type) -> None:
+        assert cls(0x0000)(0) == []
 
-@mark.parametrize(
-    ["use_iter", "n"],
-    [(use_iter, n) for use_iter in [True, False] for n in [1, 100, 250000]],
-)
-def test_sonyflake(use_iter: bool, n: int) -> None:
-    sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
+    def test_sonyflake_repr(self, cls: type) -> None:
+        sf = cls(0x0000, 0x7F7F, 0xFFFF, start_time=START_TIME)
 
-    if use_iter:
-        ids = [next(sf) for _ in range(n)]
-    else:
-        ids = sf(n)
+        assert repr(sf) == "SonyFlake(0, 32639, 65535, start_time=1749081600)"
 
-    assert len(ids) == n
-    assert len(set(ids)) == len(ids)
-    assert sorted(ids) == ids
+    def test_raw_list(self, cls: type) -> None:
+        sf = cls(0x0000, 0x7F7F, 0xFFFF, start_time=START_TIME)
+        ids, to_sleep = sf._raw(250000)
+        assert len(ids) == 250000
+        assert to_sleep > 0
 
-
-@mark.parametrize("n", [-1, 0])
-def test_sonyflake_zero(n: int) -> None:
-    assert SonyFlake(0x0000)(0) == []
+    def test_raw_none(self, cls: type) -> None:
+        sf = cls(0x0000, 0x7F7F, 0xFFFF, start_time=START_TIME)
+        id_, to_sleep = sf._raw(None)
+        assert isinstance(id_, int)
+        assert to_sleep == 0
 
 
 @mark.skipif(
     not hasattr(signal, "pthread_kill"),
     reason="pthread_kill not supported",
 )
-def test_sonyflake_sigint() -> None:
-    sf = SonyFlake(0x0000, start_time=1749081600)
+def test_c_sonyflake_sigint() -> None:
+    sf = CSonyFlake(0x0000, start_time=START_TIME)
     thread_id = threading.get_ident()
 
     def thread_func() -> None:
@@ -99,8 +133,8 @@ def test_sonyflake_sigint() -> None:
     not hasattr(signal, "pthread_kill"),
     reason="pthread_kill not supported",
 )
-def test_sonyflake_sigusr() -> None:
-    sf = SonyFlake(0x0000, start_time=1749081600)
+def test_c_sonyflake_sigusr() -> None:
+    sf = CSonyFlake(0x0000, start_time=START_TIME)
     thread_id = threading.get_ident()
 
     signal.signal(signal.SIGUSR1, lambda *_: None)
@@ -118,22 +152,16 @@ def test_sonyflake_sigusr() -> None:
     assert (b - a) > 1  # should take roughly 1.9sec
 
 
-def test_sonyflake_repr() -> None:
-    sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
-
-    assert repr(sf) == "SonyFlake(0, 32639, 65535, start_time=1749081600)"
-
-
 @mark.skipif(
     not sysconfig.get_config_var("Py_GIL_DISABLED"),
     reason="Requires Python with GIL disabled",
 )
-def test_free_threading() -> None:
+def test_c_free_threading() -> None:
     threads = 4
     out = {}
-    sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
+    sf = CSonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=START_TIME)
 
-    def _thread(n: int, sf: SonyFlake) -> None:
+    def _thread(n: int, sf: CSonyFlake) -> None:
         out[n] = [next(sf) for _ in range(250000)]
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -145,18 +173,3 @@ def test_free_threading() -> None:
         assert len(ids) == 250000
         assert len(set(ids)) == len(ids)
         assert sorted(ids) == ids
-
-
-def test_machine_id_lcg() -> None:
-    lcg = MachineIDLCG(123)
-    ids_seq = list(range(65536))
-    ids_rng = [next(lcg) for _ in range(65536)]
-
-    assert not (set(ids_seq) - set(ids_rng))
-    assert ids_seq != ids_rng
-
-
-def test_machine_id_lcg_repr() -> None:
-    lcg = MachineIDLCG(57243)
-
-    assert repr(lcg) == "MachineIDLCG(57243)"

@@ -1,27 +1,27 @@
-from typing import (
-    Any,
-    AsyncIterable,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    ClassVar,
-    Generator,
-    TypeAlias,
-)
-
-from ._sonyflake import (
-    SONYFLAKE_EPOCH,
-    SONYFLAKE_MACHINE_ID_BITS,
-    SONYFLAKE_MACHINE_ID_MAX,
-    SONYFLAKE_MACHINE_ID_OFFSET,
-    SONYFLAKE_SEQUENCE_BITS,
-    SONYFLAKE_SEQUENCE_MAX,
-    SONYFLAKE_TIME_OFFSET,
-    MachineIDLCG,
-    SonyFlake,
-)
-
-AsyncSleep: TypeAlias = Callable[[float], Awaitable[None]]
+try:
+    from ._sonyflake import (
+        SONYFLAKE_EPOCH,
+        SONYFLAKE_MACHINE_ID_BITS,
+        SONYFLAKE_MACHINE_ID_MAX,
+        SONYFLAKE_MACHINE_ID_OFFSET,
+        SONYFLAKE_SEQUENCE_BITS,
+        SONYFLAKE_SEQUENCE_MAX,
+        SONYFLAKE_TIME_OFFSET,
+        MachineIDLCG,
+        SonyFlake,
+    )
+except ImportError:  # pragma: no cover
+    from .pure import (
+        SONYFLAKE_EPOCH,
+        SONYFLAKE_MACHINE_ID_BITS,
+        SONYFLAKE_MACHINE_ID_MAX,
+        SONYFLAKE_MACHINE_ID_OFFSET,
+        SONYFLAKE_SEQUENCE_BITS,
+        SONYFLAKE_SEQUENCE_MAX,
+        SONYFLAKE_TIME_OFFSET,
+        MachineIDLCG,
+        SonyFlake,
+    )
 
 __all__ = [
     "SONYFLAKE_EPOCH",
@@ -37,7 +37,7 @@ __all__ = [
 ]
 
 
-class AsyncSonyFlake(Awaitable[int], AsyncIterable[int]):
+class AsyncSonyFlake:
     """Async wrapper for :class:`SonyFlake`.
 
     Usage:
@@ -57,10 +57,9 @@ class AsyncSonyFlake(Awaitable[int], AsyncIterable[int]):
                 break
     """
 
-    __slots__: ClassVar[tuple[str, ...]] = ("sf", "sleep")
-    sleep: AsyncSleep
+    __slots__ = ("sf", "sleep")
 
-    def __init__(self, sf: SonyFlake, sleep: AsyncSleep | None = None) -> None:
+    def __init__(self, sf: SonyFlake, sleep=None):
         """Initialize AsyncSonyFlake ID generator.
 
         Args:
@@ -76,7 +75,7 @@ class AsyncSonyFlake(Awaitable[int], AsyncIterable[int]):
         self.sf = sf
         self.sleep = sleep
 
-    async def __call__(self, n: int) -> list[int]:
+    async def __call__(self, n):
         """Generate multiple SonyFlake IDs at once.
 
         Roughly equivalent to ``[await asf for _ in range(n)]``, but more
@@ -96,7 +95,7 @@ class AsyncSonyFlake(Awaitable[int], AsyncIterable[int]):
 
         return ids
 
-    def __await__(self) -> Generator[Any, Any, int]:
+    def __await__(self):
         """Produce a SonyFlake ID."""
 
         id_, to_sleep = self.sf._raw(None)
@@ -105,12 +104,12 @@ class AsyncSonyFlake(Awaitable[int], AsyncIterable[int]):
 
         return id_
 
-    def __aiter__(self) -> AsyncIterator[int]:
+    def __aiter__(self):
         """Return an infinite SonyFlake ID async iterator."""
 
         return self._gen().__aiter__()
 
-    async def _gen(self) -> AsyncIterator[int]:
+    async def _gen(self):
         """Infinite SonyFlake ID async generator."""
 
         while True:

@@ -101,3 +101,11 @@ async def test_zero() -> None:
     asf = AsyncSonyFlake(sf, asyncio.sleep)
 
     assert len(await asf(0)) == 0
+
+
+@mark.asyncio
+async def test_default_sleep() -> None:
+    sf = SonyFlake(0x0000, 0x7F7F, 0xFFFF, start_time=1749081600)
+    asf = AsyncSonyFlake(sf)
+
+    assert await asf
