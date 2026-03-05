@@ -37,8 +37,8 @@ jobs:
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14, windows-2025]
     env:
+      CIBW_SKIP: "cp3??t-*"
       CIBW_ENVIRONMENT: >-
-        CIBW_ENABLE="cpython-freethreading"
         PIP_CONFIG_SETTINGS="build_ext=-j4"
         CFLAGS="-g0"
     steps:

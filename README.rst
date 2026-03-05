@@ -90,13 +90,15 @@ the wild:
 
 * Optional C extension module, for extra performance in CPython.
 * Async-framework-agnostic wrapper.
-* Thread-safe. Also has free-threading/nogil support.
+* Thread-safe. Also has free-threading/nogil support [#]_.
 
 .. note::
 
     Safe for concurrent use; internal locking ensures correctness. Sleeps are
     always done after internal state updates.
 
+.. [#] "nogil" wheels are not published to PyPi, you have to install this
+       package with ``--no-binary sonyflake-turbo`` flag.
 .. _Locks: https://docs.python.org/3/library/threading.html#lock-objects
 
 Machine IDs
