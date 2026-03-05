@@ -3,7 +3,7 @@ requires = ["setuptools>=70.1"]
 
 [project]
 name = "sonyflake-turbo"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
     {name = "Anatolii Aniskovych", email = "zipfile.d@protonmail.com"},
 ]
