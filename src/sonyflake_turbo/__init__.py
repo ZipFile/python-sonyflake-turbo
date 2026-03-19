@@ -91,7 +91,8 @@ class AsyncSonyFlake:
 
         ids, to_sleep = self.sf._raw(n)
 
-        await self.sleep(to_sleep)
+        if to_sleep > 0:
+            await self.sleep(to_sleep)
 
         return ids
 
@@ -100,7 +101,8 @@ class AsyncSonyFlake:
 
         id_, to_sleep = self.sf._raw(None)
 
-        yield from self.sleep(to_sleep).__await__()
+        if to_sleep > 0:
+            yield from self.sleep(to_sleep).__await__()
 
         return id_
 
@@ -114,5 +116,8 @@ class AsyncSonyFlake:
 
         while True:
             id_, to_sleep = self.sf._raw(None)
-            await self.sleep(to_sleep)
+
+            if to_sleep > 0:
+                await self.sleep(to_sleep)
+
             yield id_
