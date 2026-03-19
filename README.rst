@@ -247,6 +247,11 @@ Otherwise you might want to use it for one of the following reasons:
 .. _UUIDv7: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-7
 .. _IDOR: https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html
 
+Benchmarking
+~~~~~~~~~~~~
+
+See the `benchmarks <BENCHMARK.rst>`_ for performance details.
+
 Development
 ===========
 
