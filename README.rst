@@ -139,8 +139,14 @@ coordinating Machine IDs in your deployment.
 
 Task is not trivial, but neither is impossible. Here are a few ideas:
 
-* Coordinate ID assignment via something like etcd_ or ZooKeeper_ using lease_
-  pattern. Optimal, but a bit bothersome to implement.
+* Coordinate ID assignment using:
+
+  * Lease_ pattern (etcd_, ZooKeeper_)
+  * Distributed locks:
+
+    * Redlock_ (Redis_, Valkey_)
+    * Advisory locks (PostgreSQL_, MariaDB_, etc...)
+
 * Reinvent Twitter's SnowFlake_ by having a centralized service/sidecar. Extra
   round-trips SonyFlake intended to avoid.
 * Assign Machine IDs manually. DevOps team will hate you.
@@ -174,10 +180,15 @@ should figure out on your own. Here's some numbers for you to start
 
 .. [#] 1409529600 + 0x874AD4993 / 100 = 2026-03-05T09:15:19.87Z
 .. _UUIDv6: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-6
-.. _etcd: https://etcd.io/
-.. _ZooKeeper: https://zookeeper.apache.org/
+.. _Lease: https://martinfowler.com/articles/patterns-of-distributed-systems/lease.html
+.. _etcd: https://etcd.io/docs/v3.6/tasks/developer/how-to-create-lease/
+.. _ZooKeeper: https://zookeeper.apache.org/doc/r3.9.5/recipes.html#sc_recipes_Locks
+.. _Redlock: https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html
+.. _Redis: https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/
+.. _Valkey: https://valkey.io/topics/distlock/
+.. _PostgreSQL: https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS
+.. _MariaDB: https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock
 .. _SnowFlake: https://en.wikipedia.org/wiki/Snowflake_ID
-.. _lease: https://martinfowler.com/articles/patterns-of-distributed-systems/lease.html
 .. _LCG: https://en.wikipedia.org/wiki/Linear_congruential_generator
 
 Clock Rollback
@@ -215,7 +226,7 @@ above was that IDs lost its "monotonically increasing" property [#]_. Ofc, some
 of our and other team's code were dependent on this SonyFlake's feature. Duh.
 
 Adding even more workarounds like pre-generate IDs, sort them and ingest was
-a compelling idea, but I did not feel right. Hence, this library was born.
+a compelling idea, but it did not feel right. Hence, this library was born.
 
 .. [#] E.g. if you cycle through generators with Machine IDs 0xCAFE and 0x1337
        You may get the following IDs: ``0x0874b2a7a0cafe00``,
