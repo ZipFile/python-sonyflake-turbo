@@ -152,6 +152,26 @@ def snowflake_id_toolkit():
     _benchmark("snowflake_id_toolkit", sfs)
 
 
+def oneflake():
+    """pip install oneflake"""
+
+    from oneflake import FlakeGenerator
+
+    sfs = [
+        FlakeGenerator(
+            worker_id=machine_id,
+            epoch_ms=EPOCH * 1000,
+            timestamp_bits=39,
+            worker_bits=16,
+            sequence_bits=8,
+            time_unit_ns=10_000_000,
+        ).generate
+        for machine_id in MACHINE_IDS
+    ]
+
+    _benchmark("oneflake", sfs)
+
+
 def main():
     print(platform.python_implementation(), platform.python_version(), file=sys.stderr)
     for f in [
@@ -163,6 +183,7 @@ def main():
         iyad_f_sonyflake,
         iyad_f_sonyflake_async,
         snowflake_id_toolkit,
+        oneflake,
     ]:
         with suppress(ImportError):
             f()
@@ -184,3 +205,4 @@ if __name__ == "__main__":
     # iyad_f_sonyflake,2.48
     # iyad_f_sonyflake_async,14.07
     # snowflake_id_toolkit,1.14
+    # oneflake,0.16

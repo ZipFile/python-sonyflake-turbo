@@ -64,6 +64,7 @@ Naming breakdown:
 * ``hjpotter92_sonyflake`` - ``hjpotter92/sonyflake-py``
 * ``iyad_f_sonyflake*`` - ``iyad-f/sonyflake``
 * ``snowflake_id_toolkit`` - ``pavelprokhorenko/snowflake-id-toolkit``
+* ``oneflake`` - ``felipediel/oneflake``
 * ``turbo_native*`` - running against ``sonyflake_turbo._sonyflake.SonyFlake``
 * ``turbo_pure*`` - running against ``sonyflake_turbo.pure.SonyFlake``
 * ``turbo_*_solo`` - solo mode (``next(sf)``, ``await asf``)
@@ -91,6 +92,7 @@ For CPython 3.12.3 on the Intel Xeon E3-1275, results are following (lower %
     hjpotter92_sonyflake,1.35s,136.36%
     iyad_f_sonyflake,2.48s,250.51%
     snowflake_id_toolkit,1.14s,115.15%
+    oneflake,0.16s,16.16%
 
 .. csv-table:: Async
     :header: "Name", "Time", "%"
